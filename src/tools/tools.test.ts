@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from "vitest"
 import { KiprisClient } from "../lib/kipris-client.js"
+import { LedgerClient } from "../lib/ledger-client.js"
 import { rightsAlive } from "./rights-alive.js"
 import { verifyCitations } from "./verify-citations.js"
 import { searchIp } from "./search-ip.js"
@@ -197,6 +198,85 @@ describe("rights_alive", () => {
     const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" })
     if (!("alive" in r)) throw new Error("unexpected")
     expect(r.latest_event?.date).toBe("2021-06-01")
+  })
+})
+
+describe("rights_alive + 등록원부", () => {
+  const LEDGER_XML = `<response><header><resultCode>00</resultCode></header><body><items><item>
+    <권리자명>양수받은주식회사</권리자명>
+    <존속기간만료일자>20440601</존속기간만료일자>
+    <최종납부년차>4</최종납부년차>
+    <연차료납부기한>2027-06-01</연차료납부기한>
+  </item></items></body></response>`
+
+  const ledgerOn = () =>
+    new LedgerClient({
+      serviceKey: "K",
+      endpoint: "https://ledger.example/op",
+      cacheTtlSec: 0,
+      fetchImpl: (async () => new Response(LEDGER_XML, { status: 200 })) as unknown as typeof fetch,
+    })
+
+  it("확정 만료일이 추정치를 대체한다", async () => {
+    const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" }, ledgerOn())
+    if (!("alive" in r)) throw new Error("unexpected")
+    // 등록원부 없으면 출원일(2019-03-14)+20년 = 2039-03-14 추정
+    expect(r.expiry).toBe("2044-06-01")
+    expect(r.expiry_estimated).toBe(false)
+    expect(r.basis).toMatch(/등록원부 확정값/)
+  })
+
+  it("holder가 출원인에서 실제 등록권자로 바뀐다", async () => {
+    const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" }, ledgerOn())
+    if (!("alive" in r)) throw new Error("unexpected")
+    expect(r.holder).toBe("양수받은주식회사")
+    expect(r.warnings.join()).not.toMatch(/holder는 출원인 기준/)
+  })
+
+  it("연차료 정보가 붙고 '확인 안 됨' 경고가 사라진다", async () => {
+    const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" }, ledgerOn())
+    if (!("alive" in r)) throw new Error("unexpected")
+    expect(r.annual_fee).toEqual({ paid_year: 4, paid_until: "2027-06-01" })
+    expect(r.warnings.join()).not.toMatch(/연차료 납부 여부까지는 확인되지 않았습니다/)
+    expect(r.sources).toContain("등록원부")
+  })
+
+  it("등록원부가 꺼져 있으면 기존 동작 그대로 + 안내", async () => {
+    const off = new LedgerClient({ serviceKey: "", endpoint: "" })
+    const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" }, off)
+    if (!("alive" in r)) throw new Error("unexpected")
+    expect(r.expiry_estimated).toBe(true)
+    expect(r.annual_fee).toBeNull()
+    expect(r.sources).toEqual(["KIPRIS 서지상세"])
+    expect(r.warnings.join()).toMatch(/DATA_GO_KR_SERVICE_KEY/)
+  })
+
+  it("등록 전 출원은 등록원부를 호출하지 않는다", async () => {
+    let called = 0
+    const spy = new LedgerClient({
+      serviceKey: "K",
+      endpoint: "https://ledger.example/op",
+      cacheTtlSec: 0,
+      fetchImpl: (async () => {
+        called++
+        return new Response(LEDGER_XML, { status: 200 })
+      }) as unknown as typeof fetch,
+    })
+    await rightsAlive(makeClient(), { number: "10-2025-0001111" }, spy)
+    expect(called).toBe(0)
+  })
+
+  it("등록원부가 죽어도 본 판정은 그대로 나온다", async () => {
+    const broken = new LedgerClient({
+      serviceKey: "K",
+      endpoint: "https://ledger.example/op",
+      cacheTtlSec: 0,
+      fetchImpl: (async () => new Response("", { status: 503 })) as unknown as typeof fetch,
+    })
+    const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" }, broken)
+    if (!("alive" in r)) throw new Error("unexpected")
+    expect(r.alive).toBe(true)
+    expect(r.expiry_estimated).toBe(true)
   })
 })
 

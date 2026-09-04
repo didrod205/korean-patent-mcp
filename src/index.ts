@@ -13,6 +13,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { KiprisClient } from "./lib/kipris-client.js"
+import { LedgerClient } from "./lib/ledger-client.js"
 import { loadEnvFiles, userEnvPath } from "./lib/load-env.js"
 import { registerTools } from "./tool-registry.js"
 import { SERVER_NAME, VERSION } from "./version.js"
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
   console.log = console.warn = console.info = console.debug = toStderr
 
   const client = new KiprisClient()
+  const ledger = new LedgerClient()
   if (!client.hasKey) {
     toStderr(
       "[korean-patent-mcp] KIPRIS_SERVICE_KEY 가 없습니다. 도구 호출은 키 오류를 반환합니다.\n" +
@@ -58,7 +60,7 @@ async function main(): Promise<void> {
     { name: SERVER_NAME, version: VERSION },
     { capabilities: { tools: {} } }
   )
-  registerTools(server, client)
+  registerTools(server, client, ledger)
   await server.connect(new StdioServerTransport())
 }
 

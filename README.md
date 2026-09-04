@@ -228,9 +228,45 @@ KIPRIS_SERVICE_KEY='다른키' npx korean-patent-mcp probe
 |---|---|---|
 | `KIPRIS_SERVICE_KEY` | (필수) | KIPRIS Plus ServiceKey. 위 3가지 방법 중 하나로 설정 |
 | `KIPRIS_CACHE_TTL` | `3600` | 응답 캐시 TTL(초) |
+| `DATA_GO_KR_SERVICE_KEY` | (선택) | 등록원부 API 키 — 연차료·확정 만료일 |
+| `LEDGER_ENDPOINT` | (선택) | 등록원부 오퍼레이션 URL (활용가이드 PDF 참조) |
 | `KIPRIS_BASE_URL` | KIPRIS Plus 공식 | 엔드포인트 오버라이드 |
 
 ---
+
+## 선택: 등록원부 연동 — 추정을 확정으로
+
+기본 상태에서 `rights_alive`의 만료일은 **출원일 + 법정 존속기간**으로 계산한 추정치이고,
+연차료 납부 여부는 확인되지 않는다. 등록원부 API를 붙이면 둘 다 확정된다.
+
+| | 기본 | 등록원부 연동 |
+|---|---|---|
+| `expiry` | 추정 (`expiry_estimated: true`) | **확정** (연장등록 반영) |
+| `holder` | 출원인 | **실제 등록권자** (양도 반영) |
+| `annual_fee` | `null` | `{ paid_year, paid_until }` |
+
+**KIPRIS Plus와 별개 API다.** 키도 신청도 따로 한다.
+
+1. <https://www.data.go.kr/data/15124946/openapi.do> 에서 활용신청
+   (자동승인, 개발계정 10,000회)
+2. `DATA_GO_KR_SERVICE_KEY` = 일반 인증키(Decoding)
+3. `LEDGER_ENDPOINT` = 활용가이드 PDF에 적힌 오퍼레이션 전체 URL
+
+```bash
+npx korean-patent-mcp probe --ledger 10-1234567
+```
+
+응답 원문과 인식된 필드를 보여준다. 못 읽은 필드가 있으면 태그 목록에서 찾아
+`src/lib/ledger-client.ts`의 후보 목록에 추가하면 된다.
+
+> **`LEDGER_ENDPOINT`에 기본값이 없는 이유.** 이 API의 오퍼레이션 경로는 웹으로
+> 공개돼 있지 않고 활용가이드 PDF 안에만 있다. 추측한 URL을 기본값으로 박으면
+> 사용자는 키가 잘못된 건지 경로가 잘못된 건지 구분할 수 없다. 확정 전까지는
+> 명시적으로 받는 편이 낫다.
+
+**설정하지 않아도 서버는 그대로 동작한다.** 등록원부는 부가정보라,
+호출이 실패해도 생사 판정은 KIPRIS 서지정보만으로 나간다. 어떤 소스를 봤는지는
+응답의 `sources` 필드에 적힌다.
 
 ## `probe` — 데이터를 믿어도 되는지 먼저 확인
 
@@ -315,6 +351,7 @@ src/
 │   ├── status.ts         ★ 생사 판정 엔진. 이 프로젝트의 실체
 │   ├── number.ts         번호 파싱·정규화·텍스트 추출
 │   ├── kipris-client.ts  KIPRIS Plus HTTP (재시도·캐시·오류 해석)
+│   ├── ledger-client.ts  등록원부 실시간 조회 (선택 — 연차료·확정 만료일)
 │   ├── title-match.ts    인용 명칭 ↔ 실제 명칭 대조
 │   ├── xml.ts            의존성 없는 XML 추출
 │   ├── cache.ts          TTL 캐시 (호출량 방어)

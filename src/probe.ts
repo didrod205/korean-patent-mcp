@@ -11,9 +11,11 @@
  *   npx korean-patent-mcp probe                       샘플을 스스로 찾아서 진단
  *   npx korean-patent-mcp probe 10-2019-0123456 ...   지정한 번호로 진단
  *   npx korean-patent-mcp probe --raw 10-2019-0123456 응답 XML 원문까지 출력
+ *   npx korean-patent-mcp probe --ledger 10-1234567   등록원부 응답 진단
  */
 
 import { KiprisClient, type BiblioRecord } from "./lib/kipris-client.js"
+import { LedgerClient, parseLedger } from "./lib/ledger-client.js"
 import { parseNumber } from "./lib/number.js"
 import { judge } from "./lib/status.js"
 
@@ -63,9 +65,88 @@ function daysBetween(a: string, b: string): number {
 /** 상태값이 골고루 나오게 검색어를 흩뿌린다 — 오래된 기술일수록 소멸 건이 많다. */
 const SAMPLE_QUERIES = ["카세트 테이프", "휴대폰 폴더", "브라운관", "무선 충전", "이차전지"]
 
+/**
+ * 등록원부 진단.
+ *
+ * 이 API의 오퍼레이션 경로와 응답 필드명은 공공데이터포털 PDF 안에만 있다.
+ * 추측으로 코드에 박지 않고, 실제 응답을 받아 필드 목록을 눈으로 확인한 뒤
+ * 후보 목록(ledger-client.ts의 F)에 반영한다.
+ */
+async function probeLedger(numbers: string[]): Promise<void> {
+  const ledger = new LedgerClient()
+
+  say(`\n${c.bold}등록원부 실시간 조회 진단${c.reset}`)
+  head("0. 설정 확인")
+  if (!ledger.enabled) {
+    failx(ledger.disabledReason ?? "설정되지 않음")
+    say()
+    info("공공데이터포털 15124946 에 활용신청(자동승인, 개발계정 10,000회) 후:")
+    info("  DATA_GO_KR_SERVICE_KEY = 일반 인증키(Decoding)")
+    info("  LEDGER_ENDPOINT        = 활용가이드 PDF의 오퍼레이션 전체 URL")
+    say()
+    info("엔드포인트는 PDF에만 있어 코드에 기본값을 넣지 않았습니다.")
+    info("추측한 URL을 넣으면 키 문제인지 경로 문제인지 구분이 안 됩니다.")
+    process.exitCode = 1
+    return
+  }
+  pass("키와 엔드포인트 모두 설정됨")
+
+  const targets = numbers.length > 0 ? numbers : []
+  if (targets.length === 0) {
+    warn("등록번호를 인자로 주세요:  probe --ledger 10-1234567")
+    return
+  }
+
+  for (const raw of targets) {
+    head(`등록번호 ${raw}`)
+    let body: string
+    try {
+      body = await ledger.fetchRaw(raw.replace(/\D/g, ""))
+    } catch (e) {
+      failx(e instanceof Error ? e.message : String(e))
+      continue
+    }
+
+    const inv = tagInventory(body)
+    if (inv.length > 0) {
+      info(`응답 태그 ${inv.length}종`)
+      say(`  ${c.dim}${inv.join(", ")}${c.reset}`)
+    } else {
+      info("XML 태그가 없습니다 — JSON 응답으로 보입니다.")
+    }
+
+    const parsed = parseLedger(body)
+    say()
+    if (!parsed) {
+      failx("필요한 필드를 하나도 못 읽었습니다.")
+      info("위 태그 목록에서 만료일·권리자·연차료에 해당하는 이름을 찾아")
+      info("src/lib/ledger-client.ts 의 F 후보 목록에 추가하세요.")
+    } else {
+      const row = (label: string, v: unknown) =>
+        v ? pass(`${label}: ${String(v)}`) : warn(`${label}: 못 읽음`)
+      row("존속기간 만료일", parsed.expiryDate)
+      row("등록권자", parsed.rightHolder)
+      row("권리상태", parsed.statusText)
+      row("최종납부년차", parsed.annualFeeYear)
+      row("연차료 납부기한", parsed.annualFeePaidUntil)
+    }
+
+    say()
+    say(`  ${c.dim}── 응답 원문 (앞 3000자) ──${c.reset}`)
+    say(body.slice(0, 3000))
+  }
+
+  say(`\n  ${c.dim}등록원부 호출 ${ledger.callCount}회 사용${c.reset}\n`)
+}
+
 export async function runProbe(argv: string[]): Promise<void> {
   const showRaw = argv.includes("--raw")
   const numbers = argv.filter((a) => !a.startsWith("--"))
+
+  if (argv.includes("--ledger")) {
+    await probeLedger(numbers)
+    return
+  }
 
   say(`\n${c.bold}korean-patent-mcp probe${c.reset} ${c.dim}— KIPRIS 응답 진단${c.reset}`)
 

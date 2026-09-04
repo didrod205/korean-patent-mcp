@@ -7,6 +7,7 @@
 
 import { z } from "zod"
 import type { KiprisClient } from "../lib/kipris-client.js"
+import type { LedgerClient } from "../lib/ledger-client.js"
 import { parseNumber, kiprisUrl, type ParsedNumber } from "../lib/number.js"
 import { judge } from "../lib/status.js"
 
@@ -48,13 +49,21 @@ export interface RightsAliveResult {
   warnings: string[]
   /** KIPRIS에 기록된 최신 법적상태 이벤트 날짜. 데이터 지연 가늠자. */
   latest_event: { date: string | null; description: string | null } | null
+  /**
+   * 등록원부에서 확인한 연차료 정보. 등록원부 조회가 꺼져 있거나
+   * 등록번호가 없으면 null — "확인 못 했다"와 "안 냈다"는 다르다.
+   */
+  annual_fee: { paid_year: number | null; paid_until: string | null } | null
+  /** 이 판정이 어떤 소스를 봤는지 */
+  sources: string[]
   checked_at: string
   source_url: string
 }
 
 export async function rightsAlive(
   client: KiprisClient,
-  input: RightsAliveInput
+  input: RightsAliveInput,
+  ledger?: LedgerClient
 ): Promise<RightsAliveResult | { error: string; hint?: string; number: string; checked_at: string }> {
   const checked_at = new Date().toISOString().slice(0, 10)
   const parsed: ParsedNumber = parseNumber(input.number)
@@ -72,15 +81,47 @@ export async function rightsAlive(
     }
   }
 
+  // 등록원부는 등록번호가 있을 때만 의미가 있다.
+  // 출원 중인 건은 원부 자체가 없으므로 호출하지 않는다 — 낭비다.
+  const ledgerRec =
+    ledger?.enabled && rec.registerNumber
+      ? await ledger.lookup(rec.registerNumber.replace(/\D/g, ""))
+      : null
+
   const verdict = judge({
     statusText: rec.registerStatus,
     finalDisposal: rec.finalDisposal,
     registerDate: rec.registerDate,
     applicationDate: rec.applicationDate,
+    // 등록원부의 확정 만료일이 있으면 추정을 쓰지 않는다.
+    // 존속기간 연장등록(의약품·농약)이 반영된 값이라 추정보다 항상 정확하다.
+    ...(ledgerRec?.expiryDate ? { expiryDate: ledgerRec.expiryDate } : {}),
     ip: parsed.ip,
   })
 
   const latest = rec.legalEvents[0]
+  const sources = ["KIPRIS 서지상세"]
+  const warnings = [...verdict.warnings]
+
+  if (ledgerRec) {
+    sources.push("등록원부")
+    // 등록원부가 연차료를 알려줬으면 "확인 못 했다" 경고를 실제 정보로 대체한다.
+    if (ledgerRec.annualFeeYear || ledgerRec.annualFeePaidUntil) {
+      const idx = warnings.findIndex((w) => /연차료 납부 여부까지는 확인되지 않았습니다/.test(w))
+      if (idx !== -1) warnings.splice(idx, 1)
+    }
+  } else if (ledger && !ledger.enabled) {
+    const reason = ledger.disabledReason
+    if (reason) warnings.push(reason)
+  }
+
+  // holder는 등록원부의 등록권자가 있으면 그걸 쓴다. 출원인은 양도 전 이름이다.
+  const holder = ledgerRec?.rightHolder ?? rec.applicantName ?? null
+  if (!ledgerRec?.rightHolder && rec.applicantName) {
+    warnings.push(
+      "holder는 출원인 기준입니다. 등록 후 권리가 양도되었으면 현재 권리자와 다를 수 있습니다."
+    )
+  }
 
   return {
     alive: verdict.alive,
@@ -88,23 +129,28 @@ export async function rightsAlive(
     stage: verdict.stage,
     number: parsed.pretty,
     title: rec.inventionTitle ?? null,
-    holder: rec.applicantName ?? null,
+    holder,
     expiry: verdict.expiry ?? null,
     expiry_estimated: verdict.expiryEstimated,
     application_date: rec.applicationDate ?? null,
     register_number: rec.registerNumber ?? null,
     register_date: rec.registerDate ?? null,
     raw_status: rec.registerStatus ?? rec.finalDisposal ?? null,
-    basis: verdict.basis,
-    warnings: [
-      ...verdict.warnings,
-      ...(rec.applicantName
-        ? ["holder는 출원인 기준입니다. 등록 후 권리가 양도되었으면 현재 권리자와 다를 수 있습니다."]
-        : []),
-    ],
+    basis: ledgerRec?.expiryDate
+      ? `${verdict.basis} (만료일은 등록원부 확정값)`
+      : verdict.basis,
+    warnings,
     latest_event: latest
       ? { date: latest.date ?? null, description: latest.description ?? null }
       : null,
+    annual_fee:
+      ledgerRec && (ledgerRec.annualFeeYear || ledgerRec.annualFeePaidUntil)
+        ? {
+            paid_year: ledgerRec.annualFeeYear ?? null,
+            paid_until: ledgerRec.annualFeePaidUntil ?? null,
+          }
+        : null,
+    sources,
     checked_at,
     source_url: kiprisUrl(parsed),
   }

@@ -14,6 +14,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js"
 
 import type { KiprisClient } from "./lib/kipris-client.js"
+import type { LedgerClient } from "./lib/ledger-client.js"
 import { toToolError } from "./lib/errors.js"
 import { RightsAliveSchema, rightsAlive } from "./tools/rights-alive.js"
 import { VerifyCitationsSchema, verifyCitations } from "./tools/verify-citations.js"
@@ -26,7 +27,8 @@ const TOOLS: Tool[] = [
       "특허·실용신안 번호 하나를 받아 그 권리가 지금 살아있는지 판정합니다. " +
       "등록 여부만 보지 않고 소멸·무효·포기·존속기간 만료까지 반영해 alive를 냅니다. " +
       "특허를 근거로 어떤 주장을 하기 전에 반드시 이 도구로 확인하세요. " +
-      "출원번호(10-2019-0123456)와 등록번호(10-1234567) 둘 다 받습니다.",
+      "출원번호(10-2019-0123456)와 등록번호(10-1234567) 둘 다 받습니다. " +
+      "등록원부 조회가 설정돼 있으면 만료일이 확정값으로, holder가 실제 등록권자로 바뀌고 연차료 정보가 붙습니다.",
     inputSchema: {
       type: "object",
       properties: {
@@ -112,7 +114,7 @@ function fail(e: unknown) {
   }
 }
 
-export function registerTools(server: Server, client: KiprisClient): void {
+export function registerTools(server: Server, client: KiprisClient, ledger?: LedgerClient): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }))
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -120,7 +122,7 @@ export function registerTools(server: Server, client: KiprisClient): void {
     try {
       switch (name) {
         case "rights_alive":
-          return ok(await rightsAlive(client, RightsAliveSchema.parse(args ?? {})))
+          return ok(await rightsAlive(client, RightsAliveSchema.parse(args ?? {}), ledger))
         case "verify_citations":
           return ok(await verifyCitations(client, VerifyCitationsSchema.parse(args ?? {})))
         case "search_ip":
