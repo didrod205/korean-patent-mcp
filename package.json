@@ -32,8 +32,16 @@
     "claude",
     "model-context-protocol"
   ],
-  "author": "",
+  "author": "didrod205",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/didrod205/korean-patent-mcp.git"
+  },
+  "homepage": "https://github.com/didrod205/korean-patent-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/didrod205/korean-patent-mcp/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "zod": "^3.25.76"
