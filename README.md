@@ -249,22 +249,30 @@ KIPRIS_SERVICE_KEY='다른키' npx korean-patent-mcp probe
 
 **KIPRIS Plus와 별개 API다.** 키도 신청도 따로 한다.
 
-1. <https://www.data.go.kr/data/15124946/openapi.do> 에서 활용신청
-   (자동승인, 개발계정 10,000회)
+1. <https://www.data.go.kr/data/15124946/openapi.do> 에서 활용신청 (자동승인)
 2. `DATA_GO_KR_SERVICE_KEY` = 일반 인증키(Decoding)
-3. `LEDGER_ENDPOINT` = 활용가이드 PDF에 적힌 오퍼레이션 전체 URL
 
-```bash
-npx korean-patent-mcp probe --ledger 10-1234567
+**이게 전부다.** 엔드포인트는 기본값이 들어 있고, 번호의 권리구분을 보고
+특허는 `getPatentRegisterHistory`로, 실용신안은 `getUtilityModelHistory`로 자동으로 나뉜다.
+
+설정하면 이렇게 바뀐다:
+
+```json
+{
+  "expiry": "2034-11-26",
+  "expiry_estimated": false,
+  "holder": "삼성전자주식회사",
+  "annual_fee": { "paid_year": 6, "last_paid_date": "2026-03-27", "payment_count": 4 },
+  "sources": ["KIPRIS 서지상세", "등록원부"],
+  "warnings": []
+}
 ```
 
-응답 원문과 인식된 필드를 보여준다. 못 읽은 필드가 있으면 태그 목록에서 찾아
-`src/lib/ledger-client.ts`의 후보 목록에 추가하면 된다.
+`warnings`가 빈 배열인 것에 주목. 추정치도 미확인 항목도 없으니 붙일 경고가 없다.
 
-> **`LEDGER_ENDPOINT`에 기본값이 없는 이유.** 이 API의 오퍼레이션 경로는 웹으로
-> 공개돼 있지 않고 활용가이드 PDF 안에만 있다. 추측한 URL을 기본값으로 박으면
-> 사용자는 키가 잘못된 건지 경로가 잘못된 건지 구분할 수 없다. 확정 전까지는
-> 명시적으로 받는 편이 낫다.
+```bash
+npx korean-patent-mcp probe --ledger 10-2245822
+```
 
 **설정하지 않아도 서버는 그대로 동작한다.** 등록원부는 부가정보라,
 호출이 실패해도 생사 판정은 KIPRIS 서지정보만으로 나간다. 어떤 소스를 봤는지는

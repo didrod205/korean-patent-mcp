@@ -53,7 +53,14 @@ export interface RightsAliveResult {
    * 등록원부에서 확인한 연차료 정보. 등록원부 조회가 꺼져 있거나
    * 등록번호가 없으면 null — "확인 못 했다"와 "안 냈다"는 다르다.
    */
-  annual_fee: { paid_year: number | null; paid_until: string | null } | null
+  annual_fee: {
+    /** 납부가 확인된 마지막 연차 */
+    paid_year: number | null
+    /** 그 연차의 납입일 */
+    last_paid_date: string | null
+    /** 확인된 납부 건수 */
+    payment_count: number
+  } | null
   /** 이 판정이 어떤 소스를 봤는지 */
   sources: string[]
   checked_at: string
@@ -85,7 +92,7 @@ export async function rightsAlive(
   // 출원 중인 건은 원부 자체가 없으므로 호출하지 않는다 — 낭비다.
   const ledgerRec =
     ledger?.enabled && rec.registerNumber
-      ? await ledger.lookup(rec.registerNumber.replace(/\D/g, ""))
+      ? await ledger.lookup(rec.registerNumber.replace(/\D/g, ""), parsed.ip)
       : null
 
   const verdict = judge({
@@ -106,7 +113,7 @@ export async function rightsAlive(
   if (ledgerRec) {
     sources.push("등록원부")
     // 등록원부가 연차료를 알려줬으면 "확인 못 했다" 경고를 실제 정보로 대체한다.
-    if (ledgerRec.annualFeeYear || ledgerRec.annualFeePaidUntil) {
+    if (ledgerRec.annualFeeYear || ledgerRec.annualFeePaidDate) {
       const idx = warnings.findIndex((w) => /연차료 납부 여부까지는 확인되지 않았습니다/.test(w))
       if (idx !== -1) warnings.splice(idx, 1)
     }
@@ -144,10 +151,11 @@ export async function rightsAlive(
       ? { date: latest.date ?? null, description: latest.description ?? null }
       : null,
     annual_fee:
-      ledgerRec && (ledgerRec.annualFeeYear || ledgerRec.annualFeePaidUntil)
+      ledgerRec && (ledgerRec.annualFeeYear || ledgerRec.annualFeePaidDate)
         ? {
             paid_year: ledgerRec.annualFeeYear ?? null,
-            paid_until: ledgerRec.annualFeePaidUntil ?? null,
+            last_paid_date: ledgerRec.annualFeePaidDate ?? null,
+            payment_count: ledgerRec.payments.length,
           }
         : null,
     sources,

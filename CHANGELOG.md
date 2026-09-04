@@ -2,6 +2,31 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
+## [1.2.0]
+
+### 더함
+
+- **등록원부 연동 완성.** 활용가이드 V1.0으로 규격을 확정해 실제 데이터가 붙는다.
+  `DATA_GO_KR_SERVICE_KEY` 하나만 설정하면 동작한다.
+  - `expiry` 확정 만료일 (`cndrtExptnDate`) — `expiry_estimated: false`
+  - `holder` 현재 권리자 — `owner[]` 중 `finalOwnerYn="Y"`.
+    배열 첫 항목을 쓰면 양도 전 이름이 나오므로 최종권리자를 골라야 한다.
+  - `annual_fee` 실제 연차 납부 이력 (`paid_year`, `last_paid_date`, `payment_count`)
+  - 권리구분에 따라 오퍼레이션이 자동으로 갈린다
+    (특허 `getPatentRegisterHistory` / 실용신안 `getUtilityModelHistory`)
+
+### 바뀜
+
+- `LEDGER_ENDPOINT` 제거. 경로가 확정돼 기본값을 넣었다.
+  덮어쓰려면 `LEDGER_BASE_URL` / `LEDGER_NUMBER_PARAM` 을 쓴다.
+
+### 확정된 규격 메모
+
+필수 파라미터는 `serviceKey`·`type`·`rgstNo` 세 개다.
+`type` 을 빼면 `rgstNo` 가 맞아도 `NO_MANDATORY_REQUEST_PARAMETER_ERROR`(003)가 난다.
+이것 때문에 파라미터명을 20종 넘게 시도하고도 못 찾았다 — 이름은 첫 시도에 맞았는데
+필수 파라미터가 하나 더 있다는 걸 몰랐다.
+
 ## [1.1.0]
 
 ### 더함

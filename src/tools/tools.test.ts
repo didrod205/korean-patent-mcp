@@ -202,19 +202,28 @@ describe("rights_alive", () => {
 })
 
 describe("rights_alive + 등록원부", () => {
-  const LEDGER_XML = `<response><header><resultCode>00</resultCode></header><body><items><item>
-    <권리자명>양수받은주식회사</권리자명>
-    <존속기간만료일자>20440601</존속기간만료일자>
-    <최종납부년차>4</최종납부년차>
-    <연차료납부기한>2027-06-01</연차료납부기한>
-  </item></items></body></response>`
+  // 등록원부 실제 응답 형태 (활용가이드 V1.0 확인 완료)
+  const LEDGER_JSON = JSON.stringify({
+    resultCode: "000",
+    resultMsg: "REQUEST_SUCCESS",
+    items: {
+      rgstNo: "1023456780000",
+      cndrtExptnDate: "20440601",
+      lastDspst: "등록결정(일반)",
+      pay: [{ statAnnl: 4, lastAnnl: 4, payDate: "20270601", payAmount: 236000 }],
+      owner: [
+        { ownerName: "가나전자", finalOwnerYn: "N" },
+        { ownerName: "양수받은주식회사", finalOwnerYn: "Y" },
+      ],
+    },
+    totalCount: 1,
+  })
 
   const ledgerOn = () =>
     new LedgerClient({
       serviceKey: "K",
-      endpoint: "https://ledger.example/op",
       cacheTtlSec: 0,
-      fetchImpl: (async () => new Response(LEDGER_XML, { status: 200 })) as unknown as typeof fetch,
+      fetchImpl: (async () => new Response(LEDGER_JSON, { status: 200 })) as unknown as typeof fetch,
     })
 
   it("확정 만료일이 추정치를 대체한다", async () => {
@@ -236,13 +245,13 @@ describe("rights_alive + 등록원부", () => {
   it("연차료 정보가 붙고 '확인 안 됨' 경고가 사라진다", async () => {
     const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" }, ledgerOn())
     if (!("alive" in r)) throw new Error("unexpected")
-    expect(r.annual_fee).toEqual({ paid_year: 4, paid_until: "2027-06-01" })
+    expect(r.annual_fee).toEqual({ paid_year: 4, last_paid_date: "2027-06-01", payment_count: 1 })
     expect(r.warnings.join()).not.toMatch(/연차료 납부 여부까지는 확인되지 않았습니다/)
     expect(r.sources).toContain("등록원부")
   })
 
   it("등록원부가 꺼져 있으면 기존 동작 그대로 + 안내", async () => {
-    const off = new LedgerClient({ serviceKey: "", endpoint: "" })
+    const off = new LedgerClient({ serviceKey: "" })
     const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" }, off)
     if (!("alive" in r)) throw new Error("unexpected")
     expect(r.expiry_estimated).toBe(true)
@@ -255,11 +264,10 @@ describe("rights_alive + 등록원부", () => {
     let called = 0
     const spy = new LedgerClient({
       serviceKey: "K",
-      endpoint: "https://ledger.example/op",
       cacheTtlSec: 0,
       fetchImpl: (async () => {
         called++
-        return new Response(LEDGER_XML, { status: 200 })
+        return new Response(LEDGER_JSON, { status: 200 })
       }) as unknown as typeof fetch,
     })
     await rightsAlive(makeClient(), { number: "10-2025-0001111" }, spy)
@@ -269,7 +277,6 @@ describe("rights_alive + 등록원부", () => {
   it("등록원부가 죽어도 본 판정은 그대로 나온다", async () => {
     const broken = new LedgerClient({
       serviceKey: "K",
-      endpoint: "https://ledger.example/op",
       cacheTtlSec: 0,
       fetchImpl: (async () => new Response("", { status: 503 })) as unknown as typeof fetch,
     })

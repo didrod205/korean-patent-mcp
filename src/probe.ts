@@ -82,10 +82,9 @@ async function probeLedger(numbers: string[]): Promise<void> {
     say()
     info("공공데이터포털 15124946 에 활용신청(자동승인, 개발계정 10,000회) 후:")
     info("  DATA_GO_KR_SERVICE_KEY = 일반 인증키(Decoding)")
-    info("  LEDGER_ENDPOINT        = 활용가이드 PDF의 오퍼레이션 전체 URL")
     say()
-    info("엔드포인트는 PDF에만 있어 코드에 기본값을 넣지 않았습니다.")
-    info("추측한 URL을 넣으면 키 문제인지 경로 문제인지 구분이 안 됩니다.")
+    info("엔드포인트는 기본값이 있습니다:")
+    info("  https://apis.data.go.kr/1430000/PttRgstRtInfoInqSvc/getPatentRegisterHistory")
     process.exitCode = 1
     return
   }
@@ -101,7 +100,7 @@ async function probeLedger(numbers: string[]): Promise<void> {
     head(`등록번호 ${raw}`)
     let body: string
     try {
-      body = await ledger.fetchRaw(raw.replace(/\D/g, ""))
+      body = await ledger.fetchRaw(raw.replace(/\D/g, ""), raw.trim().startsWith("20") ? "utility" : "patent")
     } catch (e) {
       failx(e instanceof Error ? e.message : String(e))
       continue
@@ -128,7 +127,8 @@ async function probeLedger(numbers: string[]): Promise<void> {
       row("등록권자", parsed.rightHolder)
       row("권리상태", parsed.statusText)
       row("최종납부년차", parsed.annualFeeYear)
-      row("연차료 납부기한", parsed.annualFeePaidUntil)
+      row("최종 납입일", parsed.annualFeePaidDate)
+      row("납부 건수", parsed.payments.length || undefined)
     }
 
     say()
