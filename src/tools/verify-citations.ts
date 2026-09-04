@@ -99,6 +99,28 @@ export async function verifyCitations(
 
   const citations = await mapLimit(targets, CONCURRENCY, async (n): Promise<CitationCheck> => {
     const claimed = extractClaimedTitle(input.text, n.index, n.match.length)
+
+    // 형태부터 성립하지 않는 번호 — KIPRIS에 물어볼 것도 없다.
+    // 조회를 시도하면 자릿수를 잘라 맞추다 엉뚱한 실재 특허에 도달할 수 있다.
+    if (!n.valid) {
+      return {
+        number: n.pretty,
+        cited_as: n.match,
+        claimed_title: claimed ?? null,
+        source_url: "",
+        exists: false,
+        actual_title: null,
+        title_match: "not_claimed",
+        title_similarity: 0,
+        alive: null,
+        status: null,
+        stage: null,
+        holder: null,
+        verdict: "not_found",
+        note: `번호 형태가 성립하지 않습니다 — ${n.reason}`,
+      }
+    }
+
     const base = {
       number: n.pretty,
       cited_as: n.match,

@@ -94,6 +94,39 @@ export function parseNumber(input: string, hint?: NumberKind): ParsedNumber {
   const textSaysRegistration = /등록|登錄|registration/i.test(raw)
   const effectiveHint = hint ?? (textSaysRegistration ? "registration" : undefined)
 
+  // 하이픈 구획이 있으면 그게 형태를 확정한다. 숫자만 남기면 이 정보가 사라지고,
+  // "10-2019-0000000"(있을 수 없는 출원번호)이 "10-2019000"(실재하는 등록번호)로
+  // 조용히 둔갑한다. 없는 특허를 실재하는 다른 특허로 바꿔 통과시키는 건
+  // 이 서버가 막으려는 바로 그 사고다.
+  const hyphenated = raw.replace(/[\u2010-\u2015\uFF0D]/g, "-")
+
+  // NN-YYYY-NNNNNNN — 출원/공개번호 표기
+  const appForm = hyphenated.match(/([12]0)\s*-\s*(\d{4})\s*-\s*(\d{6,7})(?!\d)/)
+  if (appForm) {
+    const year = Number(appForm[2])
+    const serial = (appForm[3] ?? "").padStart(7, "0")
+    if (year < MIN_YEAR || year > MAX_YEAR) {
+      throw new NumberParseError(
+        `출원연도 ${year}가 범위를 벗어납니다(${MIN_YEAR}~${MAX_YEAR}). 번호를 확인하세요.`
+      )
+    }
+    if (/^0+$/.test(serial)) {
+      throw new NumberParseError(
+        `존재할 수 없는 출원번호입니다: ${appForm[1]}-${appForm[2]}-${serial}. ` +
+          `일련번호가 전부 0입니다. 지어낸 번호일 가능성이 큽니다.`
+      )
+    }
+    const expanded = `${appForm[1]}${appForm[2]}${serial}`
+    return {
+      raw,
+      normalized: expanded,
+      pretty: `${appForm[1]}-${appForm[2]}-${serial}`,
+      kind: "application",
+      ip,
+      year,
+    }
+  }
+
   // 13자리: 출원/공개번호와 "등록번호+부기번호"가 같은 자릿수라 형태로 갈라야 한다.
   //
   // 구분 신호 두 개:
@@ -184,12 +217,16 @@ export function tryParseNumber(input: string, hint?: NumberKind): ParsedNumber |
  * 잡으면 안 되는 것:
  *   전화번호, 사업자번호, 날짜, 30-/40-으로 시작하는 디자인·상표 번호
  */
-export interface ExtractedNumber extends ParsedNumber {
-  /** 원문에서의 위치 — 인용 문맥(명칭) 추출에 쓴다 */
-  index: number
-  /** 매치된 원문 조각 */
-  match: string
-}
+/**
+ * 텍스트에서 뽑아낸 번호.
+ *
+ * 파싱에 실패한 것도 버리지 않고 valid:false로 담는다. 특허번호 모양인데
+ * 형태가 성립하지 않는 문자열은 그 자체가 창작의 증거이며, 검증 결과에서
+ * 조용히 빠지면 "검사했는데 문제없음"으로 읽힌다 — 가장 나쁜 오답이다.
+ */
+export type ExtractedNumber =
+  | ({ index: number; match: string; valid: true } & ParsedNumber)
+  | { index: number; match: string; valid: false; pretty: string; reason: string }
 
 // 하이픈류: ASCII -, 유니코드 ‐‑‒–—, 전각 －
 const H = "[-\\u2010\\u2011\\u2012\\u2013\\u2014\\uFF0D]"
@@ -219,13 +256,30 @@ export function extractNumbers(text: string, max = 50): ExtractedNumber[] {
 
       // 앞뒤 문맥으로 등록번호 힌트를 준다 — "등록번호 10-1234567"
       const before = text.slice(Math.max(0, start - 12), start)
-      const parsed = tryParseNumber(m[0], /등록/.test(before) ? "registration" : undefined)
-      if (!parsed) continue
-      if (seen.has(parsed.normalized)) continue
+      const hint = /등록/.test(before) ? ("registration" as const) : undefined
 
-      seen.add(parsed.normalized)
+      let entry: ExtractedNumber
+      try {
+        const parsed = parseNumber(m[0], hint)
+        if (seen.has(parsed.normalized)) continue
+        seen.add(parsed.normalized)
+        entry = { ...parsed, index: start, match: m[0], valid: true }
+      } catch (e) {
+        // 특허번호 모양인데 형태가 성립하지 않는다 = 창작 신호. 버리지 않고 담는다.
+        const key = `!${m[0]}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        entry = {
+          index: start,
+          match: m[0],
+          valid: false,
+          pretty: m[0].trim(),
+          reason: e instanceof Error ? e.message : String(e),
+        }
+      }
+
       claimed.push([start, end])
-      found.push({ ...parsed, index: start, match: m[0] })
+      found.push(entry)
       if (found.length >= max) return found.sort((a, b) => a.index - b.index)
     }
   }

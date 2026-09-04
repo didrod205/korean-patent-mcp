@@ -155,9 +155,17 @@ describe("rights_alive", () => {
   })
 
   it("없는 번호는 오류로 명시한다 — 조용히 빈 결과를 주지 않는다", async () => {
-    const r = await rightsAlive(makeClient(), { number: "10-2019-0000000" })
+    // 형태는 성립하지만 KIPRIS에 없는 번호
+    const r = await rightsAlive(makeClient(), { number: "10-2019-0999999" })
     expect("error" in r).toBe(true)
     if ("error" in r) expect(r.hint).toMatch(/지어낸/)
+  })
+
+  it("형태가 성립하지 않는 번호는 조회 전에 거절한다", async () => {
+    // 자릿수를 잘라 맞추다 무관한 실재 특허에 도달하는 걸 막는다
+    await expect(rightsAlive(makeClient(), { number: "10-2019-0000000" })).rejects.toThrow(
+      /존재할 수 없는/
+    )
   })
 
   it("상표 번호는 거절한다", async () => {

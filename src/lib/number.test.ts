@@ -122,6 +122,35 @@ describe("extractNumbers", () => {
     expect(got[0]!.kind).toBe("application")
   })
 
+  it("존재할 수 없는 출원번호를 등록번호로 둔갑시키지 않는다", () => {
+    // 10-2019-0000000 은 일련번호가 전부 0이라 성립하지 않는 출원번호다.
+    // 하이픈을 무시하고 숫자만 보면 등록번호 10-2019000(실재)로 읽혀
+    // 무관한 특허를 "정상"으로 통과시킨다. 실제로 그 사고가 났었다.
+    expect(() => parseNumber("10-2019-0000000")).toThrow(/존재할 수 없는/)
+  })
+
+  it("하이픈 구획이 있으면 형태 추론보다 우선한다", () => {
+    const n = parseNumber("10-2019-0123456")
+    expect(n.kind).toBe("application")
+    expect(n.normalized).toBe("1020190123456")
+  })
+
+  it("출원연도가 범위를 벗어나면 거절한다", () => {
+    expect(() => parseNumber("10-1700-0123456")).toThrow(/출원연도/)
+  })
+
+  it("성립하지 않는 번호도 추출 결과에 남긴다 — 조용히 빠지면 안 된다", () => {
+    const got = extractNumbers("특허 10-2019-0000000 을 보유합니다.")
+    expect(got).toHaveLength(1)
+    expect(got[0]!.valid).toBe(false)
+    if (!got[0]!.valid) expect(got[0]!.reason).toMatch(/존재할 수 없는/)
+  })
+
+  it("정상 번호는 valid:true로 표시된다", () => {
+    const got = extractNumbers("10-2019-0123456")
+    expect(got[0]!.valid).toBe(true)
+  })
+
   it("max로 개수를 제한한다", () => {
     const text = Array.from({ length: 10 }, (_, i) => `10-2019-012345${i}`).join(" ")
     expect(extractNumbers(text, 3)).toHaveLength(3)
