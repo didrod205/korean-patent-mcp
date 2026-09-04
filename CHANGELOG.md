@@ -2,7 +2,12 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
-## [Unreleased]
+## [1.0.7]
+
+### 더함
+
+- `npm version` 시 `src/version.ts` 자동 동기화(`scripts/sync-version.mjs`).
+  손으로 맞추던 동안 세 번 어긋났다. 잡는 것보다 안 생기게 하는 편이 낫다.
 
 ### 바뀜
 

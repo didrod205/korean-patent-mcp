@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit",
     "gc": "npm run typecheck && npm test && npm run build",
     "prepublishOnly": "npm run build && npm run verify:package",
-    "verify:package": "node ./scripts/verify-package.mjs"
+    "verify:package": "node ./scripts/verify-package.mjs",
+    "version": "node ./scripts/sync-version.mjs && npm run build && git add src/version.ts"
   },
   "keywords": [
     "mcp",
