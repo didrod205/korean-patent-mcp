@@ -47,10 +47,41 @@ jobs:
           npm run verify:package
           npm audit --omit=dev --audit-level=high
 
+      # 이미 올라간 버전이면 조용히 넘어간다.
+      # 손으로 npm publish 한 뒤 기록용으로 릴리스를 만드는 경우가 있는데,
+      # 그때마다 워크플로가 빨개지면 진짜 실패를 못 알아보게 된다.
+      - name: 이미 배포된 버전인지 확인
+        id: check
+        run: |
+          V=$(node -p "require('./package.json').version")
+          if npm view "korean-patent-mcp@$V" version >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$V 는 이미 npm에 있습니다. 배포를 건너뜁니다."
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 인증 수단이 없으면 실패시키지 않고 명확히 알린다.
+      # NPM_TOKEN 없이 릴리스를 만든 사람에게 "왜 안 올라갔는지"를 로그로 남긴다.
+      - name: 인증 수단 확인
+        id: auth
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "have=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::NPM_TOKEN 시크릿이 없어 자동 배포를 건너뜁니다. \
+            npmjs.com에서 Automation 토큰을 만들어 gh secret set NPM_TOKEN 으로 넣거나, \
+            Trusted Publishing을 설정하세요. 그때까지는 로컬에서 npm publish 하시면 됩니다."
+          else
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # provenance: 이 패키지가 이 저장소의 이 커밋에서 빌드됐다는 증명이 붙는다.
       # NPM_TOKEN 대신 npm Trusted Publishing을 쓰려면 npmjs.com 패키지 설정에서
       # 이 저장소와 워크플로 파일명을 등록하면 된다(그 경우 NODE_AUTH_TOKEN 불필요).
       - name: Publish
+        if: steps.check.outputs.already == 'false' && steps.auth.outputs.have == 'true'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
