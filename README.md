@@ -329,6 +329,34 @@ src/
 
 ---
 
+## 배포
+
+`main`에 푸시하면 CI가 Node 20.19/22/24에서 typecheck·test·build·패키지 검증을 돌린다.
+
+릴리스를 만들면 npm에 자동 배포된다:
+
+```bash
+npm version patch && git push --follow-tags
+gh release create "v$(node -p "require('./package.json').version")" --generate-notes
+```
+
+`publish.yml`이 **릴리스 태그와 `package.json` 버전 일치를 강제**한다.
+로컬 버전과 배포 버전이 어긋나는 사고를 구조적으로 막는 게이트다.
+
+인증은 **Trusted Publishing(OIDC)** 을 쓴다. `NPM_TOKEN` 시크릿이 없다 —
+npm granular token은 최대 90일이라 분기마다 만료되고 그때마다 배포가 조용히 깨진다.
+OIDC는 GitHub가 워크플로 실행마다 발급하는 단기 증명이라 갱신할 것도, 유출될 장기 비밀도 없다.
+
+최초 1회만 npmjs.com > 패키지 > Settings > Trusted Publisher 에 등록한다:
+
+| 항목 | 값 |
+|---|---|
+| Repository | `didrod205/korean-patent-mcp` |
+| Workflow | `publish.yml` |
+
+등록 전까지는 로컬에서 `npm publish` 하면 된다 (`prepublishOnly`가 빌드와
+`verify:package`를 자동으로 돌려 빌드-버전 불일치를 막는다).
+
 ## 라이선스
 
 MIT. 데이터 출처는 [KIPRIS Plus](https://plus.kipris.or.kr) (지식재산처 / 한국특허정보원).

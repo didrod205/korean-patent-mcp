@@ -23,6 +23,11 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
 
+      # Trusted Publishing(OIDC)은 최신 npm CLI에서만 동작한다.
+      # 러너에 실린 npm이 구버전이면 토큰을 찾다가 실패한다.
+      - name: Trusted Publishing을 지원하는 npm CLI
+        run: npm install --global --ignore-scripts npm@^11
+
       # 릴리스 태그와 package.json 버전이 다르면 여기서 멈춘다.
       # 1.0.3 사고(로컬은 1.0.5인데 1.0.3이 올라감)를 막는 게이트다.
       - name: 릴리스 태그와 package.json 버전 일치 확인
@@ -61,27 +66,19 @@ jobs:
             echo "already=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # 인증 수단이 없으면 실패시키지 않고 명확히 알린다.
-      # NPM_TOKEN 없이 릴리스를 만든 사람에게 "왜 안 올라갔는지"를 로그로 남긴다.
-      - name: 인증 수단 확인
-        id: auth
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NPM_TOKEN" ]; then
-            echo "have=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::NPM_TOKEN 시크릿이 없어 자동 배포를 건너뜁니다. \
-            npmjs.com에서 Automation 토큰을 만들어 gh secret set NPM_TOKEN 으로 넣거나, \
-            Trusted Publishing을 설정하세요. 그때까지는 로컬에서 npm publish 하시면 됩니다."
-          else
-            echo "have=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      # provenance: 이 패키지가 이 저장소의 이 커밋에서 빌드됐다는 증명이 붙는다.
-      # NPM_TOKEN 대신 npm Trusted Publishing을 쓰려면 npmjs.com 패키지 설정에서
-      # 이 저장소와 워크플로 파일명을 등록하면 된다(그 경우 NODE_AUTH_TOKEN 불필요).
-      - name: Publish
-        if: steps.check.outputs.already == 'false' && steps.auth.outputs.have == 'true'
+      # 배포 인증은 Trusted Publishing(OIDC)으로 한다. 시크릿이 없다.
+      #
+      # 왜 토큰을 안 쓰는가: npm granular token은 최대 90일이라 분기마다 만료되고,
+      # 그때마다 배포가 조용히 깨진다. 클래식 토큰은 폐지 수순이다.
+      # OIDC는 GitHub가 이 워크플로 실행에 대해 발급하는 단기 증명을 쓰므로
+      # 갱신할 것도, 유출될 장기 비밀도 없다.
+      #
+      # 설정(최초 1회): npmjs.com > 패키지 > Settings > Trusted Publisher 에
+      #   Repository: didrod205/korean-patent-mcp
+      #   Workflow:   publish.yml
+      # 를 등록한다. 등록 전까지는 이 단계가 실패하며, 로컬 npm publish 로 배포하면 된다.
+      #
+      # --provenance: 이 tarball이 이 저장소의 이 커밋에서 빌드됐다는 증명이 붙는다.
+      - name: Publish (Trusted Publishing)
+        if: steps.check.outputs.already == 'false'
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
