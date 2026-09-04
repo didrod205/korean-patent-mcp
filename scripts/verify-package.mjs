@@ -25,7 +25,7 @@ const [report] = JSON.parse(raw)
 const files = report.files.map((f) => f.path)
 
 // 2) 반드시 있어야 하는 것
-const required = ["build/index.js", "README.md", "LICENSE", "package.json"]
+const required = ["build/index.js", "README.md", "LICENSE", "NOTICE", "package.json"]
 for (const f of required) {
   if (files.includes(f)) ok(`포함: ${f}`)
   else bad(`빠짐: ${f}`)

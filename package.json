@@ -34,7 +34,7 @@
     "claude",
     "model-context-protocol"
   ],
-  "author": "didrod205",
+  "author": "양경찬 (E:LAB STUDIO)",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -56,7 +56,8 @@
   "files": [
     "build",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=20.19.0"

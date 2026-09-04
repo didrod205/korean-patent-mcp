@@ -2,6 +2,19 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
+## [1.2.1]
+
+### 더함
+
+- `NOTICE` — 데이터 출처(KIPRIS Plus, 등록원부 실시간 조회), 법적 효력 고지,
+  제3자 구현 참조(korean-law-mcp, NomaDamas/k-skill), 의존성 라이선스.
+- README에 데이터 출처 절과 제작자 표기.
+
+### 바뀜
+
+- `author` / `LICENSE` 저작권자를 양경찬 (E:LAB STUDIO)로 명시.
+- `verify:package` 가 `NOTICE` 누락도 배포 전에 잡는다.
+
 ## [1.2.0]
 
 ### 더함
