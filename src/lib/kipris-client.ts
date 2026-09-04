@@ -11,7 +11,7 @@
 
 import { TtlCache } from "./cache.js"
 import { KiprisError, MissingKeyError } from "./errors.js"
-import { items, pick, isoDate } from "./xml.js"
+import { items, pick, isoDate, splitMulti } from "./xml.js"
 import type { ParsedNumber } from "./number.js"
 
 const DEFAULT_BASE = "https://plus.kipris.or.kr/kipo-api/kipi"
@@ -148,7 +148,8 @@ export class KiprisClient {
         if (res.status === 429) {
           throw new KiprisError(
             "KIPRIS 호출 한도를 초과했습니다 (HTTP 429).",
-            "KIPRIS Plus 마이페이지에서 호출 한도와 잔여량을 확인하세요."
+            "KIPRIS Plus 초당 호출 제한은 무료 50회 / 유료 75회입니다. " +
+            "동시 요청을 줄이거나 잠시 후 다시 시도하세요."
           )
         }
         if (res.status >= 500) {
@@ -257,8 +258,13 @@ export class KiprisClient {
           numOfRows,
           pageNo,
         })
-      : await this.request("getWordSearch", {
+      : // getWordSearch는 KIPRIS 문서상 "폐기예정"이다. 아직 동작하므로 계속 쓰되,
+        // 실제로 제거되면 getAdvancedSearch로 옮긴다.
+        // year는 "당해연도 기준 N년차(0~10)" 범위 지정이며, 0이 전체 기간이다
+        // (공식 샘플 word=센서&year=0이 1985년 건을 포함해 41만 건을 반환한다).
+        await this.request("getWordSearch", {
           word: q.word,
+          year: 0,
           patent: q.patent ?? true,
           utility: q.utility ?? true,
           numOfRows,
@@ -343,8 +349,9 @@ export function parseHits(xml: string): SearchHit[] {
     registerNumber: pick(b, "registerNumber", "registrationNumber"),
     registerDate: isoDate(pick(b, "registerDate")),
     registerStatus: pick(b, "registerStatus", "registrationStatus", "lastValue"),
-    applicantName: pick(b, "applicantName", "applicant"),
-    ipcNumber: pick(b, "ipcNumber"),
+    // 출원인명·IPC는 복수값이 "|"로 이어져 온다 (문서 명시)
+    applicantName: splitMulti(pick(b, "applicantName", "applicant")),
+    ipcNumber: splitMulti(pick(b, "ipcNumber")),
     abstract: pick(b, "astrtCont", "abstractText"),
   }))
 }
