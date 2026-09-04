@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860">
+  <style>
+    .m { font-family: "SF Mono","Menlo","Monaco",monospace; }
+    .k { font-family: "Apple SD Gothic Neo","AppleGothic",sans-serif; }
+  </style>
+  <rect width="1280" height="860" fill="#0b1220"/>
+
+  <!-- title bar -->
+  <rect x="0" y="0" width="1280" height="52" fill="#111c31"/>
+  <circle cx="26" cy="26" r="6" fill="#ef4444"/><circle cx="48" cy="26" r="6" fill="#f59e0b"/><circle cx="70" cy="26" r="6" fill="#22c55e"/>
+  <text x="96" y="31" class="k" font-size="14" fill="#94a3b8">korean-patent-mcp — 특허 권리 생존 판정 (등록원부 연동)</text>
+
+  <!-- panel 1 -->
+  <text x="28" y="88" class="k" font-size="15" font-weight="700" fill="#38bdf8">① rights_alive — 번호 하나로 생사 판정</text>
+  <rect x="28" y="102" width="1224" height="206" rx="8" fill="#0f1a2e" stroke="#1e293b"/>
+  <text x="46" y="128" class="m" font-size="13" fill="#64748b">$ rights_alive("10-2245822")</text>
+  <g class="m" font-size="13">
+    <text x="46" y="156" fill="#4ade80">  "alive": true,          "stage": "등록유효"</text>
+    <text x="46" y="178" fill="#cbd5e1">  "title": "불휘발성 메모리 장치를 포함하는 저장 장치 및 그것의 프로그램 방법"</text>
+    <text x="46" y="200" fill="#cbd5e1">  "holder": "삼성전자주식회사"</text>
+    <text x="46" y="222" fill="#cbd5e1">  "expiry": "2034-11-26",  "expiry_estimated": true</text>
+    <text x="46" y="244" fill="#cbd5e1">  "application_date": "2014-11-26"</text>
+    <text x="46" y="266" fill="#94a3b8">  "sources": ["KIPRIS 서지상세"]</text>
+    <text x="46" y="290" fill="#fbbf24">  ⚠ 등록원부 조회를 설정하면 만료일이 확정값으로, 연차료 정보가 붙습니다</text>
+  </g>
+
+  <!-- panel 2 -->
+  <text x="28" y="344" class="k" font-size="15" font-weight="700" fill="#38bdf8">② verify_citations — AI가 인용한 특허가 진짜인지 검증</text>
+  <rect x="28" y="358" width="1224" height="244" rx="8" fill="#0f1a2e" stroke="#1e293b"/>
+  <text x="46" y="384" class="m" font-size="13" fill="#64748b">$ verify_citations("「인공지능 기반 신약 후보물질 탐색 방법」(10-1995-0048202)과 …")</text>
+  <g class="m" font-size="13">
+    <text x="46" y="416" fill="#f87171">  ✗ 10-1995-0048202   title_mismatch</text>
+    <text x="70" y="438" fill="#94a3b8">    인용: "인공지능 기반 신약 후보물질 탐색 방법"</text>
+    <text x="70" y="458" fill="#94a3b8">    실제: "카세트테이프의한면반복재생장치및그방법"</text>
+    <text x="46" y="486" fill="#f87171">  ✗ 10-2019-0000000   not_found</text>
+    <text x="70" y="508" fill="#94a3b8">    일련번호가 전부 0입니다. 지어낸 번호일 가능성이 큽니다.</text>
+    <text x="46" y="536" fill="#4ade80">  ✓ 10-2019-0023102   ok        「무선충전코일」 등록유효</text>
+    <text x="46" y="568" fill="#fbbf24">  all_clear: false — 인용 3건 중 2건에 문제가 있습니다</text>
+    <text x="46" y="590" fill="#64748b">  (실재하지 않는 번호 1건, 명칭 불일치 1건)</text>
+  </g>
+
+  <!-- panel 3 -->
+  <text x="28" y="638" class="k" font-size="15" font-weight="700" fill="#38bdf8">③ search_ip — 검색 결과에 생사를 강제로 부착</text>
+  <rect x="28" y="652" width="1224" height="184" rx="8" fill="#0f1a2e" stroke="#1e293b"/>
+  <text x="46" y="678" class="m" font-size="13" fill="#64748b">$ search_ip("무선 충전 코일")</text>
+  <g class="m" font-size="13">
+    <text x="46" y="706" fill="#4ade80">  ● 10-2019-0023102   등록유효 (만료예정 2039-02-27)   무선충전코일</text>
+    <text x="46" y="728" fill="#4ade80">  ● 10-2018-0020941   등록유효 (만료예정 2038-02-22)   무선 통신 코일을 구비한 무선충전장치</text>
+    <text x="46" y="750" fill="#57534e">  ○ 10-2022-0044657   거절                        모바일 기기의 무선 충전코일과 리드 프레임 접합장치</text>
+    <text x="46" y="772" fill="#57534e">  ○ 10-2019-0044820   취하                        무선충전코일 및 무선충전장치</text>
+    <text x="46" y="800" fill="#fbbf24">  coverage_warning: 전체 30,685건 중 10건만 판정했습니다.</text>
+    <text x="46" y="820" fill="#64748b">  alive_in_inspected: 2   dead_in_inspected: 8</text>
+  </g>
+</svg>

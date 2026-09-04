@@ -1,0 +1,215 @@
+{
+  "dataset": "korean-patent-mcp 권리 생존 판정 결과 표본",
+  "description": "KIPRIS Plus 특허·실용 공개·등록공보 API 응답을 가공해 산출한 권리 유효 여부 판정 결과입니다. 원 데이터의 registerStatus와 출원일을 근거로 alive/stage를 계산했습니다.",
+  "source_api": "지식재산처 KIPRISPlus 특허·실용 공개·등록공보 REST API (patUtiModInfoSearchSevice)",
+  "license": "MIT (도구) / 원 데이터 출처: 지식재산처",
+  "generated_by": "korean-patent-mcp v1.1.0",
+  "판정_기준": {
+    "alive": "지금 이 순간 행사 가능한 특허권·실용신안권이 존재하는가",
+    "stage": {
+      "등록유효": "등록되었고 존속기간 내",
+      "소멸": "등록 후 소멸(연차료 불납·존속기간 만료·무효·취소)",
+      "출원종료": "등록 못 하고 종료(거절·취하·포기)",
+      "출원계속": "등록 전, 권리 미발생",
+      "불명": "상태값 해석 실패"
+    },
+    "expiry_estimated": "true면 출원일+법정 존속기간(특허 20년·실용신안 10년) 계산값. 존속기간 연장등록 미반영"
+  },
+  "records": [
+    {
+      "alive": false,
+      "status": "거절",
+      "stage": "출원종료",
+      "number": "10-1995-0048202",
+      "title": "카세트테이프의한면반복재생장치및그방법",
+      "holder": "삼성전자주식회사",
+      "expiry": "2015-12-11",
+      "expiry_estimated": true,
+      "application_date": "1995-12-11",
+      "register_number": null,
+      "register_date": null,
+      "raw_status": "거절",
+      "basis": "상태 문자열 \"거절결정(일반) 거절\"에서 출원종료 신호 검출",
+      "warnings": [
+        "LEDGER_ENDPOINT 가 없어 등록원부를 조회하지 못했습니다.",
+        "holder는 출원인 기준입니다. 등록 후 권리가 양도되었으면 현재 권리자와 다를 수 있습니다."
+      ],
+      "latest_event": {
+        "date": "2026-07-23",
+        "description": "특허고객번호 정보변경(경정)신고서·정정신고서"
+      },
+      "annual_fee": null,
+      "sources": [
+        "KIPRIS 서지상세"
+      ],
+      "checked_at": "2026-09-04",
+      "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-1995-0048202"
+    },
+    {
+      "query": "무선 충전 코일",
+      "total_matched": 30685,
+      "inspected": 8,
+      "returned": 8,
+      "alive_in_inspected": 2,
+      "dead_in_inspected": 6,
+      "coverage_warning": "전체 30,685건 중 8건만 판정했습니다. alive_in_inspected/dead_in_inspected는 이 8건 안의 수치이며 전체 분포가 아닙니다.",
+      "checked_at": "2026-09-04",
+      "results": [
+        {
+          "alive": true,
+          "status": "등록유효 (만료예정 2039-02-27)",
+          "stage": "등록유효",
+          "display": "normal",
+          "number": "10-2019-0023102",
+          "title": "무선충전코일",
+          "holder": "엘지이노텍 주식회사",
+          "application_date": "2019-02-27",
+          "register_number": "1028147040000",
+          "expiry": "2039-02-27",
+          "expiry_estimated": true,
+          "raw_status": "등록",
+          "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2019-0023102"
+        },
+        {
+          "alive": true,
+          "status": "등록유효 (만료예정 2038-02-22)",
+          "stage": "등록유효",
+          "display": "normal",
+          "number": "10-2018-0020941",
+          "title": "무선 통신 코일을 구비한 무선충전장치",
+          "holder": "엘지이노텍 주식회사",
+          "application_date": "2018-02-22",
+          "register_number": "1022254250000",
+          "expiry": "2038-02-22",
+          "expiry_estimated": true,
+          "raw_status": "등록",
+          "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2018-0020941"
+        },
+        {
+          "alive": false,
+          "status": "거절",
+          "stage": "출원종료",
+          "display": "dimmed",
+          "number": "10-2022-0044657",
+          "title": "모바일 기기의 무선 충전코일과 리드 프레임 접합장치 및 방법",
+          "holder": "권우성",
+          "application_date": "2022-04-11",
+          "register_number": null,
+          "expiry": "2042-04-11",
+          "expiry_estimated": true,
+          "raw_status": "거절",
+          "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2022-0044657"
+        },
+        {
+          "alive": false,
+          "status": "취하",
+          "stage": "출원종료",
+          "display": "dimmed",
+          "number": "10-2019-0001620",
+          "title": "무선충전코일 및 무선충전장치",
+          "holder": "엘지이노텍 주식회사",
+          "application_date": "2019-01-07",
+          "register_number": null,
+          "expiry": "2039-01-07",
+          "expiry_estimated": true,
+          "raw_status": "취하",
+          "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2019-0001620"
+        },
+        {
+          "alive": false,
+          "status": "취하",
+          "stage": "출원종료",
+          "display": "dimmed",
+          "number": "10-2018-0062168",
+          "title": "무선충전코일 및 무선충전코일모듈",
+          "holder": "엘지이노텍 주식회사",
+          "application_date": "2018-05-30",
+          "register_number": null,
+          "expiry": "2038-05-30",
+          "expiry_estimated": true,
+          "raw_status": "취하",
+          "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2018-0062168"
+        },
+        {
+          "alive": false,
+          "status": "취하",
+          "stage": "출원종료",
+          "display": "dimmed",
+          "number": "10-2017-0141112",
+          "title": "무선충전코일 및 이를 구비한 무선충전장치",
+          "holder": "엘지이노텍 주식회사",
+          "application_date": "2017-10-27",
+          "register_number": null,
+          "expiry": "2037-10-27",
+          "expiry_estimated": true,
+          "raw_status": "취하",
+          "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2017-0141112"
+        },
+        {
+          "alive": false,
+          "status": "취하",
+          "stage": "출원종료",
+          "display": "dimmed",
+          "number": "10-2017-0114780",
+          "title": "무선충전 코일 및 NFC 안테나를 포함하는 무선 충전 장치",
+          "holder": "엘지이노텍 주식회사",
+          "application_date": "2017-09-07",
+          "register_number": null,
+          "expiry": "2037-09-07",
+          "expiry_estimated": true,
+          "raw_status": "취하",
+          "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2017-0114780"
+        },
+        {
+          "alive": false,
+          "status": "거절",
+          "stage": "출원종료",
+          "display": "dimmed",
+          "number": "10-2013-0003537",
+          "title": "무선충전용 수신코일과 엔에프씨 안테나가 배터리에 함께 설치된 무선충전 배터리 모듈",
+          "holder": "(주)씨미넥스",
+          "application_date": "2013-01-11",
+          "register_number": null,
+          "expiry": "2033-01-11",
+          "expiry_estimated": true,
+          "raw_status": "거절",
+          "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2013-0003537"
+        }
+      ],
+      "notes": [
+        "생사 판정은 검색 결과의 등록상태 문자열에 근거합니다. 특정 건을 근거로 삼기 전에 그 번호로 rights_alive를 호출해 확정하세요."
+      ]
+    },
+    {
+      "alive": true,
+      "status": "등록유효 (만료예정 2034-11-26)",
+      "stage": "등록유효",
+      "number": "10-2245822",
+      "title": "불휘발성 메모리 장치를 포함하는 저장 장치 및 그것의 프로그램 방법",
+      "holder": "삼성전자주식회사",
+      "expiry": "2034-11-26",
+      "expiry_estimated": true,
+      "application_date": "2014-11-26",
+      "register_number": "10-2245822-0000",
+      "register_date": "2021-04-22",
+      "raw_status": "등록",
+      "basis": "상태 문자열 \"등록결정(일반) 등록\" + 존속기간 미도래",
+      "warnings": [
+        "만료일은 출원일 + 법정 존속기간으로 계산한 추정치입니다(연장등록 미반영).",
+        "등록 상태여도 연차료 납부 여부까지는 확인되지 않았습니다. 실제 거래·소송 전에는 등록원부를 확인하세요.",
+        "LEDGER_ENDPOINT 가 없어 등록원부를 조회하지 못했습니다.",
+        "holder는 출원인 기준입니다. 등록 후 권리가 양도되었으면 현재 권리자와 다를 수 있습니다."
+      ],
+      "latest_event": {
+        "date": "2026-07-23",
+        "description": "특허고객번호 정보변경(경정)신고서·정정신고서"
+      },
+      "annual_fee": null,
+      "sources": [
+        "KIPRIS 서지상세"
+      ],
+      "checked_at": "2026-09-04",
+      "source_url": "https://www.kipris.or.kr/khome/search/searchResult.do?tab=patent&query=10-2245822"
+    }
+  ]
+}
