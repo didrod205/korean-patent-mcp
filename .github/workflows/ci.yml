@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # 상류(KIPRIS) 점검을 아무 때나 돌릴 수 있게 한다.
+  # 응답 형태가 바뀌는 건 우리 커밋과 무관하게 일어난다.
+  workflow_dispatch:
+  schedule:
+    # 매주 월요일 09:00 KST — 상류 변경을 사용자보다 먼저 알기 위한 정기 점검
+    - cron: "0 0 * * 1"
 
 permissions:
   contents: read
@@ -53,8 +59,10 @@ jobs:
   # 키가 있는 저장소에서만 돌린다(포크 PR에는 시크릿이 없다).
   live-probe:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    continue-on-error: true
+    if: github.event_name != 'pull_request'
+    # push 때는 상류 문제로 CI가 빨개지지 않게 하고,
+    # 정기·수동 점검일 때는 실패를 그대로 드러낸다.
+    continue-on-error: ${{ github.event_name == 'push' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
