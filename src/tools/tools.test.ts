@@ -120,6 +120,27 @@ function makeClient(opts: { search?: Fixture[] } = {}): KiprisClient {
   return new KiprisClient({ serviceKey: "TEST-KEY", cacheTtlSec: 0, fetchImpl: fakeFetch })
 }
 
+/** totalCount를 임의로 지정할 수 있는 클라이언트 — 부분 표본 상황을 만든다 */
+function makeClientWithTotal(fs: Fixture[], total: number): KiprisClient {
+  const items = fs
+    .map(
+      (f) => `<item>
+    <applicationNumber>${f.applicationNumber}</applicationNumber>
+    <applicationDate>${f.applicationDate.replace(/-/g, "")}</applicationDate>
+    <inventionTitle><![CDATA[${f.inventionTitle}]]></inventionTitle>
+    <registerStatus>${f.registerStatus}</registerStatus>
+    <applicantName>${f.applicant ?? "테스트주식회사"}</applicantName>
+  </item>`
+    )
+    .join("\n")
+  const xml = `<response><header><resultCode>00</resultCode></header><count><totalCount>${total}</totalCount></count><body><items>${items}</items></body></response>`
+  return new KiprisClient({
+    serviceKey: "TEST-KEY",
+    cacheTtlSec: 0,
+    fetchImpl: (async () => new Response(xml, { status: 200 })) as unknown as typeof fetch,
+  })
+}
+
 describe("rights_alive", () => {
   it("살아있는 등록특허", async () => {
     const r = await rightsAlive(makeClient(), { number: "10-2019-0123456" })
@@ -281,14 +302,74 @@ describe("search_ip", () => {
   it("alive_only로 죽은 것을 숨긴다", async () => {
     const r = await searchIp(client(), { query: "충전", type: "all", alive_only: true, limit: 20 })
     expect(r.results.every((x) => x.alive)).toBe(true)
-    expect(r.dead_count).toBe(2)
+    expect(r.dead_in_inspected).toBe(2)
     expect(r.notes.join()).toMatch(/숨겼습니다/)
   })
 
-  it("생사 집계를 낸다", async () => {
+  it("생사 집계는 판정한 건수 기준이다", async () => {
     const r = await searchIp(client(), { query: "충전", type: "all", alive_only: false, limit: 20 })
-    expect(r.alive_count).toBe(1)
-    expect(r.dead_count).toBe(2)
+    expect(r.inspected).toBe(3)
+    expect(r.alive_in_inspected).toBe(1)
+    expect(r.dead_in_inspected).toBe(2)
+  })
+
+  it("전체를 다 못 봤으면 coverage_warning을 채운다", async () => {
+    // 응답 3건인데 totalCount가 훨씬 크면 부분 표본이다
+    const c = makeClientWithTotal([DEAD, ALIVE, PENDING], 21060)
+    const r = await searchIp(c, { query: "브라운관", type: "all", alive_only: false, limit: 20 })
+    expect(r.total_matched).toBe(21060)
+    expect(r.inspected).toBe(3)
+    expect(r.coverage_warning).toMatch(/21,060건 중 3건만 판정/)
+  })
+
+  it("표본에 살아있는 게 0건이면 결론내리지 말라고 경고한다", async () => {
+    const c = makeClientWithTotal([DEAD], 21060)
+    const r = await searchIp(c, { query: "브라운관", type: "all", alive_only: false, limit: 20 })
+    expect(r.alive_in_inspected).toBe(0)
+    expect(r.coverage_warning).toMatch(/전체에 없다고 결론내리지 마세요/)
+  })
+
+  it("전체를 다 봤으면 coverage_warning이 없다", async () => {
+    const r = await searchIp(client(), { query: "충전", type: "all", alive_only: false, limit: 20 })
+    expect(r.coverage_warning).toBeNull()
+  })
+
+  it("출원인 필터가 실제로 안 걸렀으면 그 사실을 알린다", async () => {
+    // 상류가 이상하게 동작해 무관한 출원인이 섞여 나오는 상황
+    const r = await searchIp(client(), {
+      query: "충전",
+      type: "all",
+      applicant: "삼성",
+      alive_only: false,
+      limit: 20,
+    })
+    expect(r.notes.join()).toMatch(/출원인이 이 이름을 포함하지 않습니다/)
+    expect(r.notes.join()).toMatch(/holder를 직접 확인/)
+  })
+
+  it("출원인이 실제로 일치하면 경고하지 않는다", async () => {
+    // ALIVE 픽스처의 출원인은 "가나전자"
+    const c = makeClientWithTotal([ALIVE], 1)
+    const r = await searchIp(c, {
+      query: "충전",
+      type: "all",
+      applicant: "가나전자",
+      alive_only: false,
+      limit: 20,
+    })
+    expect(r.notes.join()).not.toMatch(/포함하지 않습니다/)
+  })
+
+  it("공백 차이는 불일치로 보지 않는다", async () => {
+    const c = makeClientWithTotal([ALIVE], 1)
+    const r = await searchIp(c, {
+      query: "충전",
+      type: "all",
+      applicant: "가나 전자",
+      alive_only: false,
+      limit: 20,
+    })
+    expect(r.notes.join()).not.toMatch(/포함하지 않습니다/)
   })
 })
 

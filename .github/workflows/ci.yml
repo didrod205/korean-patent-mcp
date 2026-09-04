@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 20.19.0 = package.json engines 하한. 이 버전에서 안 돌면 사용자가 못 쓴다.
+        # 22.x, 24.x = 현재 LTS/Current. 사용자 대부분이 여기 있다.
+        node-version: [20.19.0, 22.x, 24.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      # 의존성의 lifecycle 스크립트는 실행하지 않는다.
+      # CI 러너에서 임의 코드를 돌릴 이유가 없다.
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # 실제로 pack 해서 tarball 내용을 검사한다.
+      # build 누락, .env 유출, 빌드-버전 불일치를 여기서 잡는다.
+      - name: Verify packed artifact
+        run: npm run verify:package
+
+  # 이 서버는 KIPRIS 응답 형태에 의존한다. 상류가 조용히 바뀌면
+  # 단위 테스트는 다 통과하는데 실제로는 아무것도 못 읽는 상태가 된다.
+  # 키가 있는 저장소에서만 돌린다(포크 PR에는 시크릿이 없다).
+  live-probe:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Probe KIPRIS (키가 있을 때만)
+        env:
+          KIPRIS_SERVICE_KEY: ${{ secrets.KIPRIS_SERVICE_KEY }}
+        run: |
+          if [ -z "$KIPRIS_SERVICE_KEY" ]; then
+            echo "KIPRIS_SERVICE_KEY 시크릿이 없어 건너뜁니다."
+            exit 0
+          fi
+          node build/index.js probe

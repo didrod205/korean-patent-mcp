@@ -112,8 +112,10 @@ LLM 답변을 통째로 넣으면 인용된 특허번호를 전부 검증한다.
 {
   "query": "무선 충전 코일 정렬",
   "total_matched": 412,
-  "alive_count": 7,
-  "dead_count": 13,
+  "inspected": 20,
+  "alive_in_inspected": 7,
+  "dead_in_inspected": 13,
+  "coverage_warning": "전체 412건 중 20건만 판정했습니다. ...",
   "results": [
     { "alive": true,  "display": "normal", "status": "등록유효 (만료예정 2039-03-14)", "number": "10-2019-0123456", "…": "…" },
     { "alive": false, "display": "dimmed", "status": "소멸(존속기간 만료)",           "number": "10-2001-0009999", "…": "…" }
@@ -123,6 +125,10 @@ LLM 답변을 통째로 넣으면 인용된 특허번호를 전부 검증한다.
 ```
 
 `alive_only: true`를 주면 살아있는 것만 나온다.
+
+> **집계는 `inspected` 기준이지 `total_matched` 기준이 아니다.** 전체를 다 보지 못했으면
+> `coverage_warning`이 채워진다. `alive_in_inspected: 0`을 "그런 유효 특허가 없다"로
+>읽으면 안 된다 — 21,060건 중 10건만 본 결과일 수 있다.
 
 ---
 

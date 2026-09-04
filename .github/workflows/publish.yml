@@ -1,0 +1,56 @@
+name: Publish to npm
+
+# GitHub Release를 만들면 배포된다. 수동 npm publish 대신 이 경로를 쓰면
+# "커밋은 했는데 배포는 그 이전 상태" 같은 사고가 구조적으로 막힌다.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # 릴리스 태그와 package.json 버전이 다르면 여기서 멈춘다.
+      # 1.0.3 사고(로컬은 1.0.5인데 1.0.3이 올라감)를 막는 게이트다.
+      - name: 릴리스 태그와 package.json 버전 일치 확인
+        run: |
+          node -e '
+            const v = require("./package.json").version;
+            const tag = process.env.GITHUB_REF_NAME;
+            if (![v, `v${v}`].includes(tag)) {
+              throw new Error(`릴리스 태그 ${tag} 가 package.json 버전 ${v} 과 다릅니다.`);
+            }
+            console.log(`태그 ${tag} = 버전 ${v} 확인`);
+          '
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: 배포 전 전체 검증
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+          npm run verify:package
+          npm audit --omit=dev --audit-level=high
+
+      # provenance: 이 패키지가 이 저장소의 이 커밋에서 빌드됐다는 증명이 붙는다.
+      # NPM_TOKEN 대신 npm Trusted Publishing을 쓰려면 npmjs.com 패키지 설정에서
+      # 이 저장소와 워크플로 파일명을 등록하면 된다(그 경우 NODE_AUTH_TOKEN 불필요).
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

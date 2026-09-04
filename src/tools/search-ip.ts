@@ -21,7 +21,13 @@ export const SearchIpSchema = z.object({
     .optional()
     .default("all")
     .describe("권리 종류. patent=특허, utility=실용신안, all=둘 다(기본)"),
-  applicant: z.string().optional().describe("출원인명으로 좁히기. 예: '삼성전자'"),
+  applicant: z
+    .string()
+    .optional()
+    .describe(
+      "출원인명으로 좁히기. 부분 명칭도 동작합니다 — '삼성'은 삼성전자·삼성에스디아이를 모두 잡습니다. " +
+        "특정 법인만 원하면 '삼성전자주식회사'처럼 정식 명칭을 쓰세요."
+    ),
   date_from: z
     .string()
     .optional()
@@ -56,10 +62,20 @@ export interface SearchResultItem {
 
 export interface SearchIpResult {
   query: string
+  /** KIPRIS가 보고한 전체 매칭 건수 */
   total_matched: number
+  /** 이번 호출에서 실제로 생사를 판정한 건수. 아래 집계는 전부 이 범위 안의 수치다. */
+  inspected: number
   returned: number
-  alive_count: number
-  dead_count: number
+  /** inspected 안에서 살아있는 건수. 전체(total_matched) 기준이 아니다. */
+  alive_in_inspected: number
+  /** inspected 안에서 죽은 건수. 전체(total_matched) 기준이 아니다. */
+  dead_in_inspected: number
+  /**
+   * 전체를 다 보지 못했을 때 채워진다.
+   * "살아있는 게 0건"을 "그런 특허가 없다"로 읽는 오독을 막기 위한 필드다.
+   */
+  coverage_warning: string | null
   checked_at: string
   results: SearchResultItem[]
   notes: string[]
@@ -130,12 +146,43 @@ export async function searchIp(client: KiprisClient, input: SearchIpInput): Prom
     notes.push(`alive_only=true — 소멸·출원계속 ${all.length - aliveCount}건을 숨겼습니다.`)
   }
 
+  // 전체를 다 본 게 아니라는 사실을 집계 옆에 붙여둔다.
+  // "21,060건 중 10건을 보고 alive 0건"을 "유효 특허 없음"으로 읽으면
+  // 이 서버가 없애려던 종류의 오답이 그대로 재생산된다.
+  const partial = total > all.length
+  const coverage_warning = partial
+    ? `전체 ${total.toLocaleString("en-US")}건 중 ${all.length}건만 판정했습니다. ` +
+      `alive_in_inspected/dead_in_inspected는 이 ${all.length}건 안의 수치이며 전체 분포가 아닙니다.` +
+      (aliveCount === 0
+        ? " 이 표본에 살아있는 권리가 없다고 해서 전체에 없다고 결론내리지 마세요 — " +
+          "limit을 늘리거나 검색어를 좁혀 다시 확인하세요."
+        : "")
+    : null
+
+  // KIPRIS 출원인 검색은 부분 명칭도 받는다("삼성" → 삼성전자·삼성에스디아이).
+  // 그래도 결과를 실제로 세어본다 — 상류 동작이 바뀌거나 예상 못 한 매칭이 섞이면
+  // 사용자는 좁혀진 결과라고 믿은 채 틀린 결론을 낸다. 안 걸러졌으면 그 사실을 말한다.
+  if (input.applicant && all.length > 0) {
+    const needle = input.applicant.replace(/\s+/g, "")
+    const mismatched = all.filter(
+      (r) => !(r.holder ?? "").replace(/\s+/g, "").includes(needle)
+    ).length
+    if (mismatched > 0) {
+      notes.push(
+        `출원인 "${input.applicant}" 로 걸렀으나 판정한 ${all.length}건 중 ${mismatched}건의 출원인이 이 이름을 포함하지 않습니다. ` +
+          `표기 차이(법인격 표기·띄어쓰기·영문명)일 수 있으니 결과의 holder를 직접 확인하세요.`
+      )
+    }
+  }
+
   return {
     query: input.query,
     total_matched: total,
+    inspected: all.length,
     returned: results.length,
-    alive_count: aliveCount,
-    dead_count: all.length - aliveCount,
+    alive_in_inspected: aliveCount,
+    dead_in_inspected: all.length - aliveCount,
+    coverage_warning,
     checked_at,
     results,
     notes,

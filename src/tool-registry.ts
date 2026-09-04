@@ -67,6 +67,8 @@ const TOOLS: Tool[] = [
     description:
       "특허·실용신안을 키워드로 검색합니다. 모든 결과에 생사(alive) 판정이 붙어서 나오며, " +
       "소멸한 권리는 display:\"dimmed\"로 표시됩니다. " +
+      "집계(alive_in_inspected 등)는 이번에 판정한 건수 기준이지 전체 검색 결과 기준이 아닙니다 — " +
+      "coverage_warning을 반드시 함께 읽으세요. " +
       "선행기술 조사나 경쟁사 포트폴리오 파악에 쓰되, 특정 건을 근거로 삼기 전에는 " +
       "그 번호로 rights_alive를 다시 호출해 확정하세요.",
     inputSchema: {
@@ -79,7 +81,12 @@ const TOOLS: Tool[] = [
           description: "권리 종류. 기본 all.",
           default: "all",
         },
-        applicant: { type: "string", description: "출원인명으로 좁히기. 예: 삼성전자" },
+        applicant: {
+          type: "string",
+          description:
+            "출원인명으로 좁히기. 부분 명칭도 동작합니다 — '삼성'은 삼성전자·삼성에스디아이를 모두 잡습니다. " +
+            "특정 법인만 원하면 '삼성전자주식회사'처럼 정식 명칭을 쓰세요.",
+        },
         date_from: { type: "string", description: "출원일 하한 YYYY-MM-DD" },
         date_to: { type: "string", description: "출원일 상한 YYYY-MM-DD" },
         alive_only: {
