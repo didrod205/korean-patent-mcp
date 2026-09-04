@@ -1,0 +1,54 @@
+{
+  "name": "korean-patent-mcp",
+  "version": "1.0.0",
+  "description": "특허 출원·등록번호를 넣으면 그 권리가 지금 살아있는지 판정하는 MCP 서버. KIPRIS Plus 기반. rights_alive / verify_citations / search_ip 3개 도구.",
+  "type": "module",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "bin": {
+    "korean-patent-mcp": "build/index.js"
+  },
+  "scripts": {
+    "clean": "rm -rf build",
+    "build": "npm run clean && tsc && chmod +x build/index.js",
+    "start": "node build/index.js",
+    "setup": "node build/index.js setup",
+    "probe": "node build/index.js probe",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "gc": "npm run typecheck && npm test && npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "kipris",
+    "특허",
+    "실용신안",
+    "patent",
+    "korean-patent",
+    "prior-art",
+    "claude",
+    "model-context-protocol"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.9"
+  },
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
