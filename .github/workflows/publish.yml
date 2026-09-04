@@ -50,7 +50,27 @@ jobs:
           npm test
           npm run build
           npm run verify:package
-          npm audit --omit=dev --audit-level=high
+
+      # audit 은 두 가지 이유로 실패한다: (1) 취약점이 있다 (2) 엔드포인트가 죽었다.
+      # 둘을 구분하지 않으면 네트워크 한 번 튀는 것으로 릴리스가 막힌다.
+      # 반대로 통째로 무시하면 감시 장치가 아니라 장식이 된다.
+      - name: 의존성 취약점 점검
+        run: |
+          for attempt in 1 2 3; do
+            if npm audit --omit=dev --audit-level=high; then
+              echo "취약점 없음"
+              exit 0
+            fi
+            # 취약점이 실제로 보고됐는지 확인 — 보고됐으면 재시도 없이 막는다
+            if npm audit --omit=dev --json 2>/dev/null | grep -q '"severity"'; then
+              echo "::error::high 이상 취약점이 있습니다. 배포를 막습니다."
+              npm audit --omit=dev --audit-level=high || true
+              exit 1
+            fi
+            echo "audit 엔드포인트 응답 없음 (시도 $attempt/3)"
+            sleep 10
+          done
+          echo "::warning::npm audit 엔드포인트에 접근하지 못해 취약점 점검을 건너뜁니다. 배포는 계속합니다."
 
       # 이미 올라간 버전이면 조용히 넘어간다.
       # 손으로 npm publish 한 뒤 기록용으로 릴리스를 만드는 경우가 있는데,
