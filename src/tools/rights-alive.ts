@@ -110,6 +110,35 @@ export async function rightsAlive(
   const sources = ["KIPRIS 서지상세"]
   const warnings = [...verdict.warnings]
 
+  // 소멸 사유를 연차료 이력으로 가른다.
+  //
+  // KIPRIS는 "소멸"이라고만 알려주고 왜 죽었는지는 말하지 않는다.
+  // 그런데 존속기간이 한참 남았는데 연차료가 끊겼으면 그건 존속기간 만료가 아니라
+  // 연차료 불납으로 조기에 죽은 것이다. 실무에서 이 둘은 의미가 다르다 —
+  // 만료는 예정된 종료지만, 불납은 권리자가 유지를 포기했다는 신호다.
+  let lapse: { label: string; evidence: string } | null = null
+  if (verdict.stage === "소멸" && ledgerRec?.annualFeePaidDate && verdict.expiry) {
+    const paid = Date.parse(ledgerRec.annualFeePaidDate)
+    const expiry = Date.parse(verdict.expiry)
+    const gapDays = (expiry - paid) / 86_400_000
+    // 존속기간까지 살아남았다면 마지막 납부는 만료일 근처였을 것이다.
+    // 2년 넘게 벌어져 있으면 중간에 유지를 멈춘 것이다.
+    if (gapDays > 730) {
+      const years = (gapDays / 365).toFixed(1)
+      lapse = {
+        label: "소멸(연차료 불납)",
+        evidence:
+          `연차료는 ${ledgerRec.annualFeeYear}년차(${ledgerRec.annualFeePaidDate})까지 납부됐으나 ` +
+          `존속기간은 ${verdict.expiry}까지였습니다 — ${years}년 일찍 끊겼습니다.`,
+      }
+    } else {
+      lapse = {
+        label: "소멸(존속기간 만료)",
+        evidence: `연차료가 만료일(${verdict.expiry}) 근처까지 납부돼 존속기간을 채우고 소멸했습니다.`,
+      }
+    }
+  }
+
   if (ledgerRec) {
     sources.push("등록원부")
     // 등록원부가 연차료를 알려줬으면 "확인 못 했다" 경고를 실제 정보로 대체한다.
@@ -132,7 +161,7 @@ export async function rightsAlive(
 
   return {
     alive: verdict.alive,
-    status: verdict.status,
+    status: lapse?.label ?? verdict.status,
     stage: verdict.stage,
     number: parsed.pretty,
     title: rec.inventionTitle ?? null,
@@ -143,9 +172,13 @@ export async function rightsAlive(
     register_number: rec.registerNumber ?? null,
     register_date: rec.registerDate ?? null,
     raw_status: rec.registerStatus ?? rec.finalDisposal ?? null,
-    basis: ledgerRec?.expiryDate
-      ? `${verdict.basis} (만료일은 등록원부 확정값)`
-      : verdict.basis,
+    basis: [
+      verdict.basis,
+      ledgerRec?.expiryDate ? "(만료일은 등록원부 확정값)" : "",
+      lapse?.evidence ?? "",
+    ]
+      .filter(Boolean)
+      .join(" "),
     warnings,
     latest_event: latest
       ? { date: latest.date ?? null, description: latest.description ?? null }

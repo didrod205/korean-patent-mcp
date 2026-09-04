@@ -274,6 +274,56 @@ describe("rights_alive + 등록원부", () => {
     expect(called).toBe(0)
   })
 
+  it("존속기간이 남았는데 연차료가 끊겼으면 '연차료 불납'으로 가른다", async () => {
+    // 실제 사례: 10-1994-0035342 — 존속기간 2014-12-20, 마지막 납부 2008-05-29
+    const dead = new LedgerClient({
+      serviceKey: "K",
+      cacheTtlSec: 0,
+      fetchImpl: (async () =>
+        new Response(
+          JSON.stringify({
+            resultCode: "000",
+            items: {
+              cndrtExptnDate: "20141220",
+              lastDspst: "소멸",
+              pay: [{ statAnnl: 10, lastAnnl: 10, payDate: "20080529", payAmount: 100000 }],
+              owner: [{ ownerName: "삼성전자 주식회사", finalOwnerYn: "Y" }],
+            },
+          }),
+          { status: 200 }
+        )) as unknown as typeof fetch,
+    })
+    const r = await rightsAlive(makeClient(), { number: "10-2000-0012345" }, dead)
+    if (!("alive" in r)) throw new Error("unexpected")
+    expect(r.alive).toBe(false)
+    expect(r.status).toBe("소멸(연차료 불납)")
+    expect(r.basis).toMatch(/6\.\d년 일찍 끊겼습니다/)
+  })
+
+  it("연차료가 만료일까지 납부됐으면 '존속기간 만료'로 가른다", async () => {
+    const expired = new LedgerClient({
+      serviceKey: "K",
+      cacheTtlSec: 0,
+      fetchImpl: (async () =>
+        new Response(
+          JSON.stringify({
+            resultCode: "000",
+            items: {
+              cndrtExptnDate: "20200510",
+              lastDspst: "소멸",
+              pay: [{ statAnnl: 20, lastAnnl: 20, payDate: "20191201", payAmount: 500000 }],
+              owner: [{ ownerName: "다라산업", finalOwnerYn: "Y" }],
+            },
+          }),
+          { status: 200 }
+        )) as unknown as typeof fetch,
+    })
+    const r = await rightsAlive(makeClient(), { number: "10-2000-0012345" }, expired)
+    if (!("alive" in r)) throw new Error("unexpected")
+    expect(r.status).toBe("소멸(존속기간 만료)")
+    expect(r.basis).toMatch(/존속기간을 채우고 소멸/)
+  })
+
   it("등록원부가 죽어도 본 판정은 그대로 나온다", async () => {
     const broken = new LedgerClient({
       serviceKey: "K",
