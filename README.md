@@ -130,10 +130,20 @@ LLM 답변을 통째로 넣으면 인용된 특허번호를 전부 검증한다.
 
 ### 1. KIPRIS 서비스 키 발급 (무료, 승인 대기 있음)
 
-<https://www.data.go.kr/data/15058125/openapi.do> 에서 **활용신청**.
-승인되면 마이페이지의 **"일반 인증키(Decoding)"** 값을 복사한다.
+공공데이터포털에서 **"지식재산처_특허실용신안 정보 검색 서비스"** 를 활용신청한다.
 
-> 무료 등급은 **월 1,000회**다. `verify_citations`가 번호 20개를 검증하면 그것만으로 20회다.
+<https://www.data.go.kr/data/15058788/openapi.do>
+
+개발계정은 자동승인이다. 승인되면 마이페이지 > 개발계정 상세보기에서
+**"일반 인증키(Decoding)"** 값을 복사한다.
+
+> **다른 KIPRIS API의 키로는 동작하지 않는다.** 공공데이터포털에는 KIPRIS 계열 API가
+> 여러 개 있는데(등록사항·공보·해외특허·심판 등) 활용신청은 API마다 따로 승인된다.
+> 이 서버는 `patUtiModInfoSearchSevice` 하나만 호출하므로 위 서비스를 신청해야 한다.
+> 엉뚱한 API로 신청하면 모든 호출이 `SERVICE KEY IS NOT REGISTERED` 로 실패한다.
+
+> 개발계정에는 일일 트래픽 한도가 있다(수치는 마이페이지에서 확인).
+> `verify_citations`가 번호 20개를 검증하면 그것만으로 20회다.
 > 서버는 같은 번호를 프로세스 내에서 1시간 캐시한다(`KIPRIS_CACHE_TTL`로 조절).
 
 ### 2. 설치
@@ -161,7 +171,7 @@ Claude Desktop / Claude Code / Cursor / VS Code / Windsurf / Gemini CLI / Zed �
 
 | 환경변수 | 기본값 | 설명 |
 |---|---|---|
-| `KIPRIS_SERVICE_KEY` | (필수) | data.go.kr 일반 인증키 |
+| `KIPRIS_SERVICE_KEY` | (필수) | data.go.kr 일반 인증키(Decoding) |
 | `KIPRIS_CACHE_TTL` | `3600` | 응답 캐시 TTL(초) |
 | `KIPRIS_BASE_URL` | KIPRIS Plus 공식 | 엔드포인트 오버라이드 |
 
@@ -248,7 +258,7 @@ src/
 │   ├── kipris-client.ts  KIPRIS Plus HTTP (재시도·캐시·오류 해석)
 │   ├── title-match.ts    인용 명칭 ↔ 실제 명칭 대조
 │   ├── xml.ts            의존성 없는 XML 추출
-│   ├── cache.ts          TTL 캐시 (월 1,000회 방어)
+│   ├── cache.ts          TTL 캐시 (일일 트래픽 방어)
 │   └── errors.ts         오류 → 도구 응답
 └── tools/
     ├── rights-alive.ts

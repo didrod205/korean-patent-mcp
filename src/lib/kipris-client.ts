@@ -148,7 +148,7 @@ export class KiprisClient {
         if (res.status === 429) {
           throw new KiprisError(
             "KIPRIS 호출 한도를 초과했습니다 (HTTP 429).",
-            "data.go.kr 무료 등급은 월 1,000회입니다. 마이페이지에서 잔여 호출량을 확인하세요."
+            "data.go.kr 마이페이지 > 개발계정 상세보기에서 일일 트래픽 한도와 잔여량을 확인하세요."
           )
         }
         if (res.status >= 500) {

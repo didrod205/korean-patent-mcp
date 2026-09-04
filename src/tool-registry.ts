@@ -55,7 +55,7 @@ const TOOLS: Tool[] = [
         },
         max_citations: {
           type: "number",
-          description: "검증할 최대 번호 개수(1~30, 기본 15). KIPRIS 무료 등급 월 1,000회를 고려한 상한.",
+          description: "검증할 최대 번호 개수(1~30, 기본 15). KIPRIS 호출 한도를 고려한 상한.",
           default: 15,
         },
       },

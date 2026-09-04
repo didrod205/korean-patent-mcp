@@ -32,7 +32,7 @@ export const VerifyCitationsSchema = z.object({
     .max(30)
     .optional()
     .default(15)
-    .describe("검증할 최대 번호 개수. KIPRIS 무료 등급은 월 1,000회이므로 기본 15로 제한합니다."),
+    .describe("검증할 최대 번호 개수. 번호 하나가 KIPRIS 호출 1회이므로 기본 15로 제한합니다."),
 })
 
 export type VerifyCitationsInput = z.infer<typeof VerifyCitationsSchema>
