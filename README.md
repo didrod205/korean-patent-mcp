@@ -175,9 +175,52 @@ Claude Desktop / Claude Code / Cursor / VS Code / Windsurf / Gemini CLI / Zed �
 }
 ```
 
+### 키를 어디에 둘 것인가
+
+셋 중 하나. 위에서부터 권장한다.
+
+**1) MCP 클라이언트에서 쓸 때 — `setup`이 알아서 넣는다**
+
+```bash
+npx korean-patent-mcp@latest setup
+```
+
+클라이언트 설정 파일의 `env` 블록에 기록하고 파일 권한을 `600`으로 조인다.
+
+**2) 여러 곳에서 공용으로 — 홈 설정 파일**
+
+```bash
+mkdir -p ~/.config/korean-patent-mcp
+printf 'KIPRIS_SERVICE_KEY=발급받은키\n' > ~/.config/korean-patent-mcp/.env
+chmod 600 ~/.config/korean-patent-mcp/.env
+```
+
+MCP 클라이언트는 서버를 임의의 작업 디렉토리에서 띄우므로, 프로젝트 `.env`보다
+이 경로가 안정적이다. 서버가 시작할 때 자동으로 읽는다.
+
+**3) 이 저장소에서 개발할 때 — 프로젝트 `.env`**
+
+```bash
+cp .env.example .env && chmod 600 .env
+```
+
+`.gitignore`에 이미 들어 있어 커밋되지 않는다.
+
+우선순위는 **실제 환경변수 > 프로젝트 `.env` > 홈 `.env`** 다.
+일회성으로 다른 키를 쓰려면 그냥 앞에 붙이면 된다:
+
+```bash
+KIPRIS_SERVICE_KEY='다른키' npx korean-patent-mcp probe
+```
+
+> `~/.zshrc`에 `export` 하는 방법도 되지만 권하지 않는다.
+> 셸을 띄우는 모든 프로세스에 키가 노출되고, dotfiles를 저장소에 올리는 사람이 많다.
+
+> **키를 이슈·PR·채팅에 붙여넣지 마세요.** 노출됐으면 KIPRIS Plus 마이페이지에서 재발급하세요.
+
 | 환경변수 | 기본값 | 설명 |
 |---|---|---|
-| `KIPRIS_SERVICE_KEY` | (필수) | KIPRIS Plus ServiceKey |
+| `KIPRIS_SERVICE_KEY` | (필수) | KIPRIS Plus ServiceKey. 위 3가지 방법 중 하나로 설정 |
 | `KIPRIS_CACHE_TTL` | `3600` | 응답 캐시 TTL(초) |
 | `KIPRIS_BASE_URL` | KIPRIS Plus 공식 | 엔드포인트 오버라이드 |
 

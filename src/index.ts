@@ -13,10 +13,14 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { KiprisClient } from "./lib/kipris-client.js"
+import { loadEnvFiles, userEnvPath } from "./lib/load-env.js"
 import { registerTools } from "./tool-registry.js"
 import { SERVER_NAME, VERSION } from "./version.js"
 
 async function main(): Promise<void> {
+  // .env 는 어떤 서브커맨드보다 먼저 읽는다 — probe도 setup도 키를 필요로 한다.
+  loadEnvFiles()
+
   const args = process.argv.slice(2)
 
   if (args[0] === "setup") {
@@ -44,8 +48,9 @@ async function main(): Promise<void> {
   if (!client.hasKey) {
     toStderr(
       "[korean-patent-mcp] KIPRIS_SERVICE_KEY 가 없습니다. 도구 호출은 키 오류를 반환합니다.\n" +
-        "  발급: https://plus.kipris.or.kr — 서비스 신청 > \"특허실용신안 정보검색\"\n" +
-        "  설정: npx korean-patent-mcp setup"
+        "  발급: https://plus.kipris.or.kr — 서비스 신청 > \"특허·실용 공개·등록공보\"\n" +
+        "  설정: npx korean-patent-mcp setup\n" +
+        `  또는: ${userEnvPath()} 에 KIPRIS_SERVICE_KEY=... 한 줄`
     )
   }
 

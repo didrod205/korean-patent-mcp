@@ -25,7 +25,10 @@ export class MissingKeyError extends KiprisError {
         "1) https://plus.kipris.or.kr 회원가입 후 \"특허실용신안 정보검색\" 서비스 신청",
         "   (공공데이터포털이 아니라 KIPRIS Plus에서 직접 신청합니다)",
         "2) 발급된 ServiceKey 복사",
-        "3) 환경변수 KIPRIS_SERVICE_KEY 에 설정하거나 `npx korean-patent-mcp setup` 실행",
+        "3) 아래 중 하나로 설정:",
+        "   - npx korean-patent-mcp setup   (MCP 클라이언트 설정에 기록)",
+        "   - ~/.config/korean-patent-mcp/.env 에 KIPRIS_SERVICE_KEY=... 한 줄",
+        "   - 환경변수 export KIPRIS_SERVICE_KEY=...",
       ].join("\n")
     )
     this.name = "MissingKeyError"
