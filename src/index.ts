@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   if (!client.hasKey) {
     toStderr(
       "[korean-patent-mcp] KIPRIS_SERVICE_KEY 가 없습니다. 도구 호출은 키 오류를 반환합니다.\n" +
-        "  발급: https://www.data.go.kr/data/15058788/openapi.do (특허실용신안 정보 검색 서비스)\n" +
+        "  발급: https://plus.kipris.or.kr — 서비스 신청 > \"특허실용신안 정보검색\"\n" +
         "  설정: npx korean-patent-mcp setup"
     )
   }

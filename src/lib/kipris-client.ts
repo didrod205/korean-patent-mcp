@@ -148,7 +148,7 @@ export class KiprisClient {
         if (res.status === 429) {
           throw new KiprisError(
             "KIPRIS 호출 한도를 초과했습니다 (HTTP 429).",
-            "data.go.kr 마이페이지 > 개발계정 상세보기에서 일일 트래픽 한도와 잔여량을 확인하세요."
+            "KIPRIS Plus 마이페이지에서 호출 한도와 잔여량을 확인하세요."
           )
         }
         if (res.status >= 500) {
@@ -186,7 +186,8 @@ export class KiprisClient {
       const hint =
         /SERVICE_KEY|SERVICE KEY|인증|AUTH|등록되지/i.test(`${code} ${msg ?? ""}`)
           ? "서비스 키가 잘못되었거나 이 API에 대한 활용신청이 승인되지 않았습니다. " +
-            "data.go.kr 마이페이지 > 활용신청 현황에서 승인 상태와 키를 다시 확인하세요."
+            "KIPRIS Plus 마이페이지 > 서비스 신청 현황에서 \"특허실용신안 정보검색\"이 승인됐는지 확인하세요. " +
+            "다른 KIPRIS 서비스 키로는 이 엔드포인트가 열리지 않습니다."
           : /LIMITED|초과|EXCEED/i.test(`${code} ${msg ?? ""}`)
             ? "일일/월간 호출 한도를 초과했습니다."
             : undefined

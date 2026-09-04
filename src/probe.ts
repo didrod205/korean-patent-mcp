@@ -74,8 +74,8 @@ export async function runProbe(argv: string[]): Promise<void> {
   head("0. 키 확인")
   if (!client.hasKey) {
     failx("KIPRIS_SERVICE_KEY 가 설정되지 않았습니다.")
-    info("발급: https://www.data.go.kr/data/15058788/openapi.do")
-    info('공공데이터포털 > "지식재산처_특허실용신안 정보 검색 서비스" > 활용신청 (무료, 개발계정 자동승인)')
+    info("발급: https://plus.kipris.or.kr  (회원가입 > 서비스 신청 > \"특허실용신안 정보검색\")")
+    info("주의: 공공데이터포털이 아니라 KIPRIS Plus에서 직접 신청합니다.")
     info("설정: export KIPRIS_SERVICE_KEY='...'  또는  npx korean-patent-mcp setup")
     process.exitCode = 1
     return

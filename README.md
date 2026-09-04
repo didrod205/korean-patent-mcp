@@ -130,21 +130,29 @@ LLM 답변을 통째로 넣으면 인용된 특허번호를 전부 검증한다.
 
 ### 1. KIPRIS 서비스 키 발급 (무료, 승인 대기 있음)
 
-공공데이터포털에서 **"지식재산처_특허실용신안 정보 검색 서비스"** 를 활용신청한다.
+**KIPRIS Plus에서 직접 신청한다.** 공공데이터포털(data.go.kr)이 아니다.
 
-<https://www.data.go.kr/data/15058788/openapi.do>
+<https://plus.kipris.or.kr> → 회원가입 → 서비스 신청 → **"특허실용신안 정보검색"**
 
-개발계정은 자동승인이다. 승인되면 마이페이지 > 개발계정 상세보기에서
-**"일반 인증키(Decoding)"** 값을 복사한다.
+발급된 **ServiceKey** 를 `KIPRIS_SERVICE_KEY` 에 넣는다.
 
-> **다른 KIPRIS API의 키로는 동작하지 않는다.** 공공데이터포털에는 KIPRIS 계열 API가
-> 여러 개 있는데(등록사항·공보·해외특허·심판 등) 활용신청은 API마다 따로 승인된다.
-> 이 서버는 `patUtiModInfoSearchSevice` 하나만 호출하므로 위 서비스를 신청해야 한다.
-> 엉뚱한 API로 신청하면 모든 호출이 `SERVICE KEY IS NOT REGISTERED` 로 실패한다.
+> **공공데이터포털에서 찾지 마세요.** 포털의 KIPRISPlus 항목들은 "활용신청"이 아니라
+> **"제공처 바로가기"** 로 KIPRIS Plus를 가리키기만 합니다. 예전에 있던
+> `data.go.kr/data/15058788` 항목은 현재 폐지(404)됐습니다.
+> 포털에서 직접 신청 가능한 건 별개 API인 등록원부 실시간 조회(`15124946`) 쪽입니다.
 
-> 개발계정에는 일일 트래픽 한도가 있다(수치는 마이페이지에서 확인).
-> `verify_citations`가 번호 20개를 검증하면 그것만으로 20회다.
-> 서버는 같은 번호를 프로세스 내에서 1시간 캐시한다(`KIPRIS_CACHE_TTL`로 조절).
+> **다른 KIPRIS 서비스 키로는 동작하지 않습니다.** KIPRIS에는 등록사항·공보·해외특허·심판 등
+> 서비스가 여러 개 있고 신청은 각각 따로 승인됩니다. 이 서버는 `patUtiModInfoSearchSevice`
+> 하나만 호출하므로 위 서비스를 신청해야 합니다.
+> 엉뚱한 서비스 키를 넣으면 모든 호출이 `SERVICE KEY IS NOT REGISTERED` 로 실패합니다.
+
+> **요금을 먼저 확인하세요.** KIPRIS Plus Open API에는 유료 구간이 있습니다
+> (공시 기준 5,320원/일. Open API 2종 이하 50% + 개인·중소기업·공공기관 추가 50% 감면).
+> `patUtiModInfoSearchSevice`가 무료 범위에 드는지는 신청 전에
+> [수수료 안내](https://plus.kipris.or.kr/portal/use/paymentMmg.do?menuNo=210112)에서 확인하세요.
+
+> 호출량에 한도가 있습니다. `verify_citations`가 번호 20개를 검증하면 그것만으로 20회입니다.
+> 서버는 같은 번호를 프로세스 내에서 1시간 캐시합니다(`KIPRIS_CACHE_TTL`로 조절).
 
 ### 2. 설치
 
@@ -171,7 +179,7 @@ Claude Desktop / Claude Code / Cursor / VS Code / Windsurf / Gemini CLI / Zed �
 
 | 환경변수 | 기본값 | 설명 |
 |---|---|---|
-| `KIPRIS_SERVICE_KEY` | (필수) | data.go.kr 일반 인증키(Decoding) |
+| `KIPRIS_SERVICE_KEY` | (필수) | KIPRIS Plus ServiceKey |
 | `KIPRIS_CACHE_TTL` | `3600` | 응답 캐시 TTL(초) |
 | `KIPRIS_BASE_URL` | KIPRIS Plus 공식 | 엔드포인트 오버라이드 |
 
@@ -258,7 +266,7 @@ src/
 │   ├── kipris-client.ts  KIPRIS Plus HTTP (재시도·캐시·오류 해석)
 │   ├── title-match.ts    인용 명칭 ↔ 실제 명칭 대조
 │   ├── xml.ts            의존성 없는 XML 추출
-│   ├── cache.ts          TTL 캐시 (일일 트래픽 방어)
+│   ├── cache.ts          TTL 캐시 (호출량 방어)
 │   └── errors.ts         오류 → 도구 응답
 └── tools/
     ├── rights-alive.ts

@@ -22,9 +22,9 @@ export class MissingKeyError extends KiprisError {
     super(
       "KIPRIS 서비스 키가 설정되지 않았습니다.",
       [
-        "1) https://www.data.go.kr/data/15058788/openapi.do 에서 활용신청",
-        '   (공공데이터포털 > "지식재산처_특허실용신안 정보 검색 서비스", 무료·개발계정 자동승인)',
-        '2) 승인 후 "일반 인증키(Decoding)" 값을 복사',
+        "1) https://plus.kipris.or.kr 회원가입 후 \"특허실용신안 정보검색\" 서비스 신청",
+        "   (공공데이터포털이 아니라 KIPRIS Plus에서 직접 신청합니다)",
+        "2) 발급된 ServiceKey 복사",
         "3) 환경변수 KIPRIS_SERVICE_KEY 에 설정하거나 `npx korean-patent-mcp setup` 실행",
       ].join("\n")
     )

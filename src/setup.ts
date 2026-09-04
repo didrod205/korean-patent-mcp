@@ -108,9 +108,10 @@ export async function runSetup(): Promise<void> {
 
     // 1) API 키
     say(`${c.bold}[1/3] KIPRIS 서비스 키${c.reset}`)
-    say(`${c.dim}  발급: https://www.data.go.kr/data/15058788/openapi.do${c.reset}`)
-    say(`${c.dim}  → "지식재산처_특허실용신안 정보 검색 서비스" 활용신청 (무료, 개발계정 자동승인)${c.reset}`)
-    say(`${c.dim}  data.go.kr 마이페이지의 "일반 인증키(Decoding)" 값을 붙여넣으세요.${c.reset}`)
+    say(`${c.dim}  발급: https://plus.kipris.or.kr  (회원가입 > 서비스 신청)${c.reset}`)
+    say(`${c.dim}  → 신청할 서비스: "특허실용신안 정보검색" (patUtiModInfoSearchSevice)${c.reset}`)
+    say(`${c.dim}  공공데이터포털이 아니라 KIPRIS Plus에서 직접 신청합니다.${c.reset}`)
+    say(`${c.dim}  발급받은 ServiceKey 값을 붙여넣으세요.${c.reset}`)
     say(`${c.dim}  Enter로 건너뛰면 나중에 환경변수 KIPRIS_SERVICE_KEY 로 설정할 수 있습니다.${c.reset}\n`)
 
     const apiKey = (await rl.question(`  ${c.cyan}>${c.reset} 서비스 키: `)).trim()
