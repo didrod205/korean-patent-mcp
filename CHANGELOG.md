@@ -2,6 +2,28 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
+## [1.3.1]
+
+### 고침
+
+- **setup이 실행 중인 클라이언트를 감지해 설정 유실을 막는다.**
+  Claude Desktop은 `claude_desktop_config.json` 을 자기 preferences 저장소로도 쓴다.
+  앱이 켜진 채로 파일을 고치면 종료 시 메모리 상태로 덮어써서 방금 추가한
+  `mcpServers` 가 조용히 사라진다. 실제로 등록해놓고 날아갔다.
+  사용자는 "설치했는데 서버가 안 보인다"만 겪고 원인을 못 찾는다.
+
+  감지 자체도 두 번 틀렸다:
+  - `pgrep -x` 는 Electron 앱을 못 잡는다(프로세스명이 전체 경로).
+  - 메인 프로세스는 `pgrep -f` 에도 안 보인다 — macOS가 argv 읽기를 막는다.
+    보이는 건 헬퍼뿐이고 경로가 `Claude Helper.app/...` 이라 실행 파일명으로는 안 맞는다.
+
+    → 헬퍼까지 공통으로 갖는 번들 경로(`Claude.app/Contents`)로 잡는다.
+
+### 더함
+
+- 최초 실행이 30초 걸린다는 안내(`npx` 다운로드). 그 사이 "연결 실패"로 보인다.
+  전역 설치로 줄이는 방법도 README에 적었다.
+
 ## [1.3.0]
 
 ### 더함

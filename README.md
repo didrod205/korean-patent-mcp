@@ -169,6 +169,16 @@ npx korean-patent-mcp@latest setup
 키를 프롬프트로 받아 **실제 호출로 검증한 뒤** 선택한 클라이언트 설정 파일에 등록한다.
 Claude Desktop / Claude Code / Cursor / VS Code / Windsurf / Gemini CLI / Zed 지원.
 
+> **설치 전에 MCP 클라이언트를 완전히 종료하세요(Cmd+Q).**
+> Claude Desktop은 `claude_desktop_config.json` 을 자기 preferences 저장소로도 씁니다.
+> 켜진 채로 고치면 앱이 종료할 때 덮어써서 방금 추가한 서버가 조용히 사라집니다.
+> `setup` 이 실행 중인 클라이언트를 감지해 막아주지만, 수동 설정 시에는 직접 확인하세요.
+
+> **최초 실행은 30초쯤 걸립니다.** `npx` 가 패키지를 받는 시간입니다(2회차부터 1초 내외).
+> 그 사이 "연결 실패"로 보이면 클라이언트를 한 번 더 재시작하세요.
+> 매번 빠르게 뜨길 원하면 `npm i -g korean-patent-mcp` 후 `command` 를
+> `korean-patent-mcp` 로 바꾸면 됩니다.
+
 ### 수동 설정
 
 ```json

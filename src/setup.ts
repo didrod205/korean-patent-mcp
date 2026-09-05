@@ -60,6 +60,62 @@ function detectClients(): readonly ClientConfig[] {
   return out
 }
 
+/**
+ * 설정 파일을 쓰는 앱이 켜져 있는지 본다.
+ *
+ * Claude Desktop은 이 파일을 자기 preferences 저장소로도 쓴다.
+ * 앱이 켜진 상태에서 파일을 고치면, 앱이 종료하면서 메모리 상태로 덮어써
+ * 방금 추가한 mcpServers 가 조용히 사라진다. 실제로 그렇게 날아갔다.
+ * 그러면 사용자는 "설치했는데 서버가 안 보인다"를 겪고 원인을 못 찾는다.
+ */
+async function runningClients(): Promise<string[]> {
+  const { execFile } = await import("node:child_process")
+  const { promisify } = await import("node:util")
+  const exec = promisify(execFile)
+
+  // macOS에서 이 감지는 두 번 틀렸다. 기록해 둔다.
+  //
+  //  1) pgrep -x 는 못 잡는다. Electron 앱의 프로세스명이 전체 경로로 잡혀
+  //     정확매칭이 실패한다.
+  //  2) 메인 프로세스(예: /Applications/Claude.app/Contents/MacOS/Claude)는
+  //     pgrep -f 에도 안 보인다. macOS가 그 프로세스의 argv 읽기를 막는다.
+  //     보이는 건 헬퍼 프로세스뿐이고 경로가
+  //     "Claude Helper.app/Contents/MacOS/Claude Helper" 라 실행 파일명으로는 안 맞는다.
+  //
+  // 그래서 헬퍼까지 공통으로 갖는 번들 경로 조각으로 잡는다.
+  const macBundles: ReadonlyArray<readonly [string, string]> = [
+    ["Claude.app/Contents", "Claude Desktop"],
+    ["Cursor.app/Contents", "Cursor"],
+    ["Visual Studio Code.app/Contents", "VS Code"],
+    ["Windsurf.app/Contents", "Windsurf"],
+    ["Zed.app/Contents", "Zed"],
+  ]
+  const otherNames: ReadonlyArray<readonly [string, string]> = [
+    ["claude", "Claude Desktop"],
+    ["cursor", "Cursor"],
+    ["code", "VS Code"],
+    ["windsurf", "Windsurf"],
+    ["zed", "Zed"],
+  ]
+
+  const os = platform()
+  // Windows에는 pgrep이 없다. 감지 실패는 설치를 막지 않는다 — 경고를 못 낼 뿐이다.
+  if (os === "win32") return []
+
+  const targets = os === "darwin" ? macBundles : otherNames
+  const flag = os === "darwin" ? "-f" : "-x"
+  const found: string[] = []
+  for (const [pattern, label] of targets) {
+    try {
+      await exec("pgrep", [flag, pattern])
+      if (!found.includes(label)) found.push(label)
+    } catch {
+      // pgrep은 못 찾으면 exit 1 — 안 켜져 있다는 뜻이다
+    }
+  }
+  return found
+}
+
 async function readJson(path: string): Promise<Record<string, unknown>> {
   if (!existsSync(path)) return {}
   try {
@@ -152,7 +208,26 @@ export async function runSetup(): Promise<void> {
       return
     }
 
-    // 3) 기록
+    // 3) 기록 — 그 전에 실행 중인 앱이 있으면 멈춘다
+    const running = await runningClients()
+    if (running.length > 0) {
+      say(`\n  ${c.yellow}${c.bold}!${c.reset} ${running.join(", ")} 이(가) 실행 중입니다.`)
+      say(`  ${c.dim}이 앱들은 설정 파일을 자기 저장소로도 씁니다. 켜진 채로 고치면${c.reset}`)
+      say(`  ${c.dim}앱이 종료할 때 덮어써서 방금 추가한 서버가 조용히 사라집니다.${c.reset}`)
+      say(`  ${c.dim}완전히 종료(Cmd+Q)한 뒤 계속하세요.${c.reset}\n`)
+      const go = (await rl.question(`  ${c.cyan}>${c.reset} 종료했으면 Enter, 그대로 진행하려면 y: `))
+        .trim()
+        .toLowerCase()
+      if (go !== "y") {
+        const still = await runningClients()
+        if (still.length > 0) {
+          say(`\n  ${c.red}${c.bold}✗${c.reset} ${still.join(", ")} 이(가) 아직 실행 중입니다. 종료 후 다시 실행하세요.\n`)
+          return
+        }
+        say(`  ${c.green}✓${c.reset} 모두 종료 확인`)
+      }
+    }
+
     say(`\n${c.bold}[3/3] 설정 파일 업데이트${c.reset}\n`)
     for (const idx of indices) {
       const cl = clients[idx]
@@ -170,6 +245,8 @@ export async function runSetup(): Promise<void> {
     }
 
     say(`\n  ${c.green}${c.bold}설치 완료.${c.reset} 클라이언트를 재시작하면 도구 3개가 붙습니다.`)
+    say(`  ${c.dim}최초 실행은 npx가 패키지를 받느라 30초쯤 걸립니다.${c.reset}`)
+    say(`  ${c.dim}그 사이 "연결 실패"로 보이면 클라이언트를 한 번 더 재시작하세요.${c.reset}`)
     say(`  ${c.dim}rights_alive · verify_citations · search_ip${c.reset}`)
     if (!apiKey) say(`\n  ${c.yellow}!${c.reset} 키 미설정 — 설정 파일의 env.KIPRIS_SERVICE_KEY 를 채워야 동작합니다.`)
     say(`\n  ${c.dim}응답 진단이 필요하면: npx korean-patent-mcp probe${c.reset}\n`)
