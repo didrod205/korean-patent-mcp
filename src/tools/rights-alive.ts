@@ -8,7 +8,7 @@
 import { z } from "zod"
 import type { KiprisClient } from "../lib/kipris-client.js"
 import type { LedgerClient } from "../lib/ledger-client.js"
-import { parseNumber, kiprisUrl, type ParsedNumber } from "../lib/number.js"
+import { parseNumber, tryParseNumber, kiprisUrl, type ParsedNumber } from "../lib/number.js"
 import { judge } from "../lib/status.js"
 
 export const RightsAliveSchema = z.object({
@@ -169,7 +169,10 @@ export async function rightsAlive(
     expiry: verdict.expiry ?? null,
     expiry_estimated: verdict.expiryEstimated,
     application_date: rec.applicationDate ?? null,
-    register_number: rec.registerNumber ?? null,
+    // 표기를 통일한다. 상류는 "10-2245822-0000"·"1028147040000" 처럼 제각각으로 준다.
+    register_number: rec.registerNumber
+      ? (tryParseNumber(rec.registerNumber, "registration")?.pretty ?? rec.registerNumber)
+      : null,
     register_date: rec.registerDate ?? null,
     raw_status: rec.registerStatus ?? rec.finalDisposal ?? null,
     basis: [

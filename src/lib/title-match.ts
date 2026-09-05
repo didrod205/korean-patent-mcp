@@ -81,8 +81,52 @@ export function compareTitles(claimed: string | undefined, actual: string | unde
 const QUOTED = /[「『"“'‘]([^」』"”'’\n]{2,60})[」』"”'’]/g
 const NAMED = /명칭\s*[:：]\s*([^)\n,，]{2,60})/
 
+/**
+ * 다른 특허번호의 위치. 명칭 탐색 창을 여기서 끊는다.
+ *
+ * 끊지 않으면 앞 번호가 뒤 번호의 명칭을 끌어온다:
+ *   "특허 10-2019-0000000 을 보유하고 있으며, 「무선충전코일」(10-2019-0023102)도..."
+ *   → 10-2019-0000000 의 claimed_title 이 "무선충전코일" 로 잡힌다.
+ *
+ * 그 번호가 실재하는 건이었다면 멀쩡한 인용을 명칭 불일치로 무고하게 된다.
+ * 이 도구에서 가장 나쁜 오류다 — 창작을 잡으라고 만들었는데 진짜를 창작이라 하는 것.
+ */
+const H2 = "[-\\u2010\\u2011\\u2012\\u2013\\u2014\\uFF0D]"
+const ANY_NUMBER = new RegExp(
+  `[12]0\\s*${H2}\\s*\\d{4}\\s*${H2}\\s*\\d{6,7}` +
+    `|[12]0\\s*${H2}\\s*\\d{7}` +
+    `|\\b[12]0\\d{11}\\b`,
+  "g"
+)
+
+/** 창의 앞쪽에서 마지막 번호 뒤로 자른다. */
+function cutBefore(text: string): string {
+  ANY_NUMBER.lastIndex = 0
+  let end = 0
+  let m: RegExpExecArray | null
+  while ((m = ANY_NUMBER.exec(text)) !== null) end = m.index + m[0].length
+  return end > 0 ? text.slice(end) : text
+}
+
+/**
+ * 따옴표 묶음이 자기 번호를 뒤에 달고 있는지 본다.
+ *
+ * 「무선충전코일」(10-2019-0023102) 처럼 명칭 바로 뒤에 번호가 붙으면
+ * 그 명칭은 그 번호의 것이다. 앞선 다른 번호가 가져가면 안 된다.
+ * 번호 위치에서 창을 자르는 것만으로는 못 막는다 — 명칭이 번호보다 앞에 오기 때문이다.
+ */
+function ownedByFollowingNumber(after: string, quoteEnd: number): boolean {
+  // 번호 전체(10-2019-0023102 = 15자)가 들어갈 만큼 봐야 한다.
+  // 8자만 보면 "(10-2019" 에서 끊겨 매칭이 안 된다 — 실제로 그렇게 못 잡았다.
+  const tail = after.slice(quoteEnd, quoteEnd + 24)
+  ANY_NUMBER.lastIndex = 0
+  const m = ANY_NUMBER.exec(tail)
+  return m !== null && m.index <= 2 // 닫는 따옴표와 번호 사이에 여는 괄호 정도만 허용
+}
+
 export function extractClaimedTitle(text: string, numberIndex: number, numberLength: number): string | undefined {
-  const before = text.slice(Math.max(0, numberIndex - 120), numberIndex)
+  // 앞쪽 창은 직전 번호 뒤부터 본다 — 그보다 앞은 그 번호의 몫이다.
+  const before = cutBefore(text.slice(Math.max(0, numberIndex - 120), numberIndex))
   const after = text.slice(numberIndex + numberLength, numberIndex + numberLength + 120)
 
   // "명칭:" 표기가 있으면 그게 가장 확실하다
@@ -100,12 +144,20 @@ export function extractClaimedTitle(text: string, numberIndex: number, numberLen
     if (!/[.。\n]/.test(gap) && gap.length <= 20) return lastBefore[1].trim()
   }
 
-  // 번호 바로 뒤의 첫 따옴표 묶음
+  // 번호 바로 뒤의 첫 따옴표 묶음.
+  // 단, 그 묶음이 자기 번호를 뒤에 달고 있으면 그건 다른 인용의 명칭이다.
   QUOTED.lastIndex = 0
   const firstAfter = QUOTED.exec(after)
   if (firstAfter?.[1]) {
     const gap = after.slice(0, firstAfter.index)
-    if (!/[.。\n]/.test(gap) && gap.length <= 20) return firstAfter[1].trim()
+    const quoteEnd = firstAfter.index + firstAfter[0].length
+    if (
+      !/[.。\n]/.test(gap) &&
+      gap.length <= 20 &&
+      !ownedByFollowingNumber(after, quoteEnd)
+    ) {
+      return firstAfter[1].trim()
+    }
   }
 
   return undefined

@@ -103,7 +103,9 @@ function toItem(hit: SearchHit): SearchResultItem | null {
     title: hit.inventionTitle ?? null,
     holder: hit.applicantName ?? null,
     application_date: hit.applicationDate ?? null,
-    register_number: hit.registerNumber ?? null,
+    register_number: hit.registerNumber
+      ? (tryParseNumber(hit.registerNumber, "registration")?.pretty ?? hit.registerNumber)
+      : null,
     expiry: v.expiry ?? null,
     expiry_estimated: v.expiryEstimated,
     raw_status: hit.registerStatus ?? null,
