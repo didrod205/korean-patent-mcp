@@ -17,3 +17,14 @@ rsvg-convert -w 248  -h 93  docs/thumbnail.svg  -o docs/thumbnail.png
 
 `screenshot.svg`의 내용은 실제 실행 결과를 옮긴 것이다.
 도구 출력 형식이 바뀌면 실제로 돌려본 값으로 갱신한다 — 목업을 넣지 않는다.
+
+## demo.gif
+
+README 상단 데모. 실제 실행 결과를 프레임으로 그린 것이다.
+
+```bash
+python3 scripts/make-demo.py     # 프레임 렌더 → docs/demo.gif
+```
+
+프레임마다 지속시간을 따로 준다. 같은 프레임을 여러 장 반복하는 방식은
+PIL이 중복을 병합해버려 멈춤이 사라진다 — 실제로 그렇게 한 번 날아갔다.

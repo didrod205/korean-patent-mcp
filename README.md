@@ -8,7 +8,9 @@ KIPRIS Plus 기반. 도구는 3개다. 늘리지 않는다.
 npx korean-patent-mcp@latest setup
 ```
 
-![korean-patent-mcp 실행 화면](https://raw.githubusercontent.com/didrod205/korean-patent-mcp/main/docs/screenshot.png)
+![korean-patent-mcp 데모](https://raw.githubusercontent.com/didrod205/korean-patent-mcp/main/docs/demo.gif)
+
+<sub>도구 3개의 실제 실행 결과입니다. 재현한 화면이 아니라 KIPRIS·등록원부에서 받은 값입니다.</sub>
 
 ---
 
