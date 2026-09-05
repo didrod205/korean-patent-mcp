@@ -78,7 +78,15 @@ export function compareTitles(claimed: string | undefined, actual: string | unde
  *   10-2019-0123456 "무선 충전 장치"
  *   특허 제10-1234567호(명칭: 무선 충전 장치)
  */
-const QUOTED = /[「『"“'‘]([^」』"”'’\n]{2,60})[」』"”'’]/g
+/**
+ * 정규식을 호출마다 새로 만든다. 상수로 공유하지 않는다.
+ *
+ * /g 정규식은 exec 가 lastIndex 를 남기고, 그 상태를 matchAll 이 이어받는다.
+ * 인용 여러 건을 연달아 처리하면 앞 건이 남긴 위치 때문에 뒤 건이
+ * 자기 명칭을 못 찾는다 — 실제로 그렇게 명칭이 통째로 사라졌다.
+ * 상태를 아예 안 만드는 편이 reset 을 빠뜨리지 않는 것보다 안전하다.
+ */
+const quoted = (): RegExp => /[「『"“'‘]([^」』"”'’\n]{2,60})[」』"”'’]/g
 const NAMED = /명칭\s*[:：]\s*([^)\n,，]{2,60})/
 
 /**
@@ -92,19 +100,20 @@ const NAMED = /명칭\s*[:：]\s*([^)\n,，]{2,60})/
  * 이 도구에서 가장 나쁜 오류다 — 창작을 잡으라고 만들었는데 진짜를 창작이라 하는 것.
  */
 const H2 = "[-\\u2010\\u2011\\u2012\\u2013\\u2014\\uFF0D]"
-const ANY_NUMBER = new RegExp(
-  `[12]0\\s*${H2}\\s*\\d{4}\\s*${H2}\\s*\\d{6,7}` +
-    `|[12]0\\s*${H2}\\s*\\d{7}` +
-    `|\\b[12]0\\d{11}\\b`,
-  "g"
-)
+const anyNumber = (): RegExp =>
+  new RegExp(
+    `[12]0\\s*${H2}\\s*\\d{4}\\s*${H2}\\s*\\d{6,7}` +
+      `|[12]0\\s*${H2}\\s*\\d{7}` +
+      `|\\b[12]0\\d{11}\\b`,
+    "g"
+  )
 
 /** 창의 앞쪽에서 마지막 번호 뒤로 자른다. */
 function cutBefore(text: string): string {
-  ANY_NUMBER.lastIndex = 0
+  const re = anyNumber()
   let end = 0
   let m: RegExpExecArray | null
-  while ((m = ANY_NUMBER.exec(text)) !== null) end = m.index + m[0].length
+  while ((m = re.exec(text)) !== null) end = m.index + m[0].length
   return end > 0 ? text.slice(end) : text
 }
 
@@ -119,8 +128,7 @@ function ownedByFollowingNumber(after: string, quoteEnd: number): boolean {
   // 번호 전체(10-2019-0023102 = 15자)가 들어갈 만큼 봐야 한다.
   // 8자만 보면 "(10-2019" 에서 끊겨 매칭이 안 된다 — 실제로 그렇게 못 잡았다.
   const tail = after.slice(quoteEnd, quoteEnd + 24)
-  ANY_NUMBER.lastIndex = 0
-  const m = ANY_NUMBER.exec(tail)
+  const m = anyNumber().exec(tail)
   return m !== null && m.index <= 2 // 닫는 따옴표와 번호 사이에 여는 괄호 정도만 허용
 }
 
@@ -136,7 +144,7 @@ export function extractClaimedTitle(text: string, numberIndex: number, numberLen
   if (namedBefore?.[1]) return namedBefore[1].trim()
 
   // 번호 바로 앞의 마지막 따옴표 묶음
-  const beforeMatches = [...before.matchAll(QUOTED)]
+  const beforeMatches = [...before.matchAll(quoted())]
   const lastBefore = beforeMatches[beforeMatches.length - 1]
   if (lastBefore?.[1]) {
     // 따옴표와 번호 사이에 문장이 끼어 있으면 다른 얘기다
@@ -146,8 +154,7 @@ export function extractClaimedTitle(text: string, numberIndex: number, numberLen
 
   // 번호 바로 뒤의 첫 따옴표 묶음.
   // 단, 그 묶음이 자기 번호를 뒤에 달고 있으면 그건 다른 인용의 명칭이다.
-  QUOTED.lastIndex = 0
-  const firstAfter = QUOTED.exec(after)
+  const firstAfter = quoted().exec(after)
   if (firstAfter?.[1]) {
     const gap = after.slice(0, firstAfter.index)
     const quoteEnd = firstAfter.index + firstAfter[0].length
